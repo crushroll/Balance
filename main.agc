@@ -54,6 +54,8 @@ type Main
 	s as float
 	pw as float
 	ph as float
+	ox as integer
+	oy as integer
 	base as integer
 	cells as Cell[]
 	shps as Shape[]
@@ -65,6 +67,8 @@ type Main
 	selSpr as integer
 	selTyp as integer // The selected typ.
 	selShp as Shape // The selected sprite to drop based on typ.
+	startSpr as integer
+	startTx as integer
 	
 endtype
 
@@ -91,15 +95,19 @@ function maInit()
 			
 	local i as integer
 	local x as float
+	local y as float
 	local shp as Shape
 	
 	ma.s = 32
-	ma.w = 22
-	ma.h = 22
-	ma.pw = ma.s * ma.w
-	ma.ph = ma.s * ma.h
+	ma.w = 20
+	ma.h = 20
+	ma.pw = (ma.w + 2) * ma.s
+	ma.ph = (ma.h + 3) * ma.s
+	ma.ox = 1
+	ma.oy = 2
+	
 	setVirtualResolution(ma.pw, ma.ph)
-	SetWindowSize(ma.pw * 2, ma.ph * 2, false)
+	SetWindowSize(ma.pw, ma.ph, false)
 	SetWindowPosition(GetDeviceWidth() / 2 - GetWindowWidth() / 2, GetDeviceHeight() / 2 - GetWindowHeight() / 2)
 	
 	coInit()
@@ -121,34 +129,43 @@ function maInit()
 	
 	maCreateShape(shp, MA_SHP_X, 0, 0)
 	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_I, 5, 0)
+	maCreateShape(shp, MA_SHP_I, 0, 0)
 	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_J, 10, 0)
+	maCreateShape(shp, MA_SHP_J, 0, 0)
 	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_L, 15, 0)
+	maCreateShape(shp, MA_SHP_L, 0, 0)
 	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_O, 0, 5)
+	maCreateShape(shp, MA_SHP_O, 0, 0)
 	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_S, 5, 5)
+	maCreateShape(shp, MA_SHP_S, 0, 0)
 	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_T, 10, 5)
+	maCreateShape(shp, MA_SHP_T, 0, 0)
 	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_Z, 15, 5)
+	maCreateShape(shp, MA_SHP_Z, 0, 0)
 	ma.buts.insert(shp)
 	
 	maGrid()
 
 	x = ma.s
+	y = ma.s
 	
 	for i = 0 to ma.buts.length
 		
 		SetSpriteScale(ma.buts[i].spr, 0.25, 0.25)
-		SetSpritePosition(ma.buts[i].spr, x, 0)
+		SetSpritePositionByOffset(ma.buts[i].spr, x, y)
 		inc x, GetSpriteWidth(ma.buts[i].spr) + ma.s
 		SetSpriteDepth(ma.buts[i].spr, MA_DEPTH_SEL)
 		SetSpriteVisible(ma.buts[i].spr, false)
 		
 	next
+	
+	ma.startSpr = CreateSprite(co.pixImg)
+	SetSpriteScale(ma.startSpr, ma.s * 2, ma.s)
+	SetSpritePositionByOffset(ma.startSpr, co.w - GetSpriteWidth(ma.startSpr) / 4 * 3, GetSpriteHeight(ma.startSpr))
+	ma.startTx = coCreateText("Start", 0, 30)
+	SetTextAlignment(ma.startTx, 1)
+	coSetTextColor(ma.startTx, co.black)
+	SetTextPosition(ma.startTx, GetSpriteXByOffset(ma.startSpr), GetSpriteYByOffset(ma.startSpr) - GetTextTotalHeight(ma.startTx) / 2)
 	
 	ma.tickImg = loadimage("gfx/tick.png")
 	ma.selSpr = createsprite(ma.tickImg)
@@ -197,18 +214,18 @@ function maGrid()
 	
 	col1 = co.grey[8]
 	col2 = co.grey[9]
-	py = ma.s
+	py = ma.oy * ma.s
 	
-	for y = 1 to ma.h - 2
+	for y = 0 to ma.h - 1
 		
 		if mod(y, 2) = 0 then col = col2 else col = col1
-		px = ma.s
+		px = ma.ox * ma.s
 			
-		for x = 1 to ma.w - 2
+		for x = 0 to ma.w - 1
 			
 			spr = CreateSprite(co.pixImg)
 			setspritescale(spr, ma.s, ma.s)
-			SetSpritePosition(spr, px, py)
+			SetSpritePositionByOffset(spr, px + ma.s / 2, py + ma.s / 2)
 			coSetSpriteColor(spr, col)
 			SetSpriteDepth(spr, MA_DEPTH_EDIT)
 				
@@ -280,7 +297,7 @@ function maCreateShape(shp ref as Shape, typ as integer, x as integer, y as inte
 		
 	spr = CreateSprite(ma.typImg[typ])
 	SetSpriteScale(spr, 0.5, 0.5)
-	SetSpritePosition(spr, x * ma.s, y * ma.s)
+	SetSpritePositionByOffset(spr, x * ma.s, y * ma.s)
 	coSetSpriteColor(spr, ma.typCol[typ])
 	SetSpriteDepth(spr, MA_DEPTH_SHAPE)
 	SetSpriteShape(spr, 3)
@@ -366,15 +383,30 @@ function maUpdateEdit()
 	inUpdate()
 	
 	if in.ptrPressed
-		maSelectShape()
+		
+		if maStartPressed()
+			// Do nothing.
+		elseif maSelectShape() = -1
+			maDropShape()
+		endif
+
 	elseif in.ptrDown
 	elseif in.ptrReleased
-		maDropShape()
 	else
 		maHoverCell()
 	endif
 
 endfunction
+
+// ---------------------------
+// Check if start is prssed.
+//
+function maStartPressed()
+	
+	//if coGetSpriteHitTest4(ma.buts[i].spr, in.ptrX, in.ptrY, 0)
+	//endif
+
+endfunction false
 
 // ---------------------------
 // Check if selecting a shape at the top.
@@ -383,8 +415,12 @@ function maSelectShape()
 	
 	local i as integer
 	local shp as Shape
+	local idx as integer
+	
+	idx = -1
 	
 	for i = 0 to ma.buts.length
+		
 		if coGetSpriteHitTest4(ma.buts[i].spr, in.ptrX, in.ptrY, 0)
 			
 			if i = ma.selTyp
@@ -395,18 +431,21 @@ function maSelectShape()
 				ma.selTyp = i
 			endif
 			
+			SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.buts[ma.selTyp].spr), GetSpriteYByOffset(ma.buts[ma.selTyp].spr))
+	
+			if ma.selTyp
+				maCloneShape(ma.buts[ma.selTyp], ma.selShp)
+			endif
+			
+			idx = i
+			
 			exit
 			
 		endif
+		
 	next
-	
-	SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.buts[ma.selTyp].spr), GetSpriteYByOffset(ma.buts[ma.selTyp].spr))
-	
-	if ma.selTyp
-		maCloneShape(ma.buts[ma.selTyp], ma.selShp)
-	endif
-	
-endfunction
+		
+endfunction idx
 
 // ---------------------------
 // Rotate selected shape.
@@ -426,6 +465,8 @@ function maRotateShape(shp ref as Shape)
 			SetSpriteAngle(shp.spr, 0)
 			
 		endif
+		
+		SetSpriteShader(shp.spr, 3)
 
 	elseif shp.typ = MA_SHP_J or shp.typ = MA_SHP_L or shp.typ = MA_SHP_T
 		
@@ -451,6 +492,8 @@ function maRotateShape(shp ref as Shape)
 			
 		endif
 		
+		SetSpriteShader(shp.spr, 3)
+		
 	endif
 		
 endfunction
@@ -459,6 +502,31 @@ endfunction
 // Drop a dragged shape.
 //
 function maDropShape()
+	
+	local i as integer
+	
+	if ma.selTyp // Not deleting.
+		
+		ma.shps.insert(ma.selShp)
+		//SetSpriteVisible(ma.selShp.spr, false)
+		ma.selShp.typ = MA_SHP_X
+		ma.selShp.spr = 0
+		ma.selTyp = 0
+		
+	else // Delete?
+		
+		for i = 0 to ma.shps.length
+			if coGetSpriteHitTest4(ma.shps[i].spr, in.ptrX, in.ptrY, 0)
+				
+				maDeleteShape(ma.shps[i])
+				ma.shps.remove(i)
+				exit
+				
+			endif
+		next
+		
+	endif
+	
 endfunction
 
 // ---------------------------
@@ -472,15 +540,14 @@ function maFindCell()
 	idx = -1
 	
 	for i = 0 to ma.cells.length
-		
-		//log("px=" + str(in.ptrx) + ", py=" + str(in.ptry) + ", cell.x=" + str(ma.cells[i].rect.x) + ", celly=" + str(ma.cells[i].rect.y))
-		
+				
 		if coPointWithinRect2(in.ptrX, in.ptrY, ma.cells[i].rect)
 			
 			idx = i
 			exit
 			
 		endif
+		
 	next
 	
 endfunction idx
@@ -491,6 +558,8 @@ endfunction idx
 function maHoverCell()
 	
 	local idx as integer
+	local w as float
+	local h as float
 	
 	if ma.selTyp
 		
@@ -498,10 +567,21 @@ function maHoverCell()
 		
 		if idx > -1
 			
-			if ma.selShp.rot = 1 or ma.selShp.rot = 3
-				setSpritePosition(ma.selShp.spr, ma.cells[idx].x * ma.s - ma.s / 2, ma.cells[idx].y * ma.s - ma.s / 2)
-			else
-				setSpritePosition(ma.selShp.spr, ma.cells[idx].x * ma.s, ma.cells[idx].y * ma.s)
+			ma.selShp.x = ma.cells[idx].x
+			ma.selShp.y = ma.cells[idx].y
+
+			if ma.selShp.rot = 1 or ma.selShp.rot = 3	
+				
+				h = getspritewidth(ma.selShp.spr)
+				w = GetSpriteHeight(ma.selShp.spr)
+				SetSpritePositionByOffset(ma.selShp.spr, (ma.ox + ma.selShp.x) * ma.s + w / 2, (ma.oy + ma.selShp.y) * ma.s + h / 2)	
+				
+			else	
+						
+				w = getspritewidth(ma.selShp.spr)
+				h = GetSpriteHeight(ma.selShp.spr)
+				SetSpritePositionByOffset(ma.selShp.spr, (ma.ox + ma.selShp.x) * ma.s + w / 2, (ma.oy + ma.selShp.y) * ma.s + h / 2)	
+				
 			endif
 			
 			SetSpriteVisible(ma.selShp.spr, true)
