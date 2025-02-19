@@ -6,6 +6,7 @@
 
 #include "common.agc"
 #include "input.agc"
+#include "but.agc"
 
 #constant MA_STATE_NONE = 0
 #constant MA_STATE_EDIT = 1
@@ -48,6 +49,22 @@ type Shape
 	
 endtype
 
+type StoredShape
+	
+	typ as integer
+	x as integer
+	y as integer
+	rot as integer
+	
+endtype
+
+type Level
+	
+	nbr as integer
+	shps as StoredShape[] // String shape.
+	
+endtype
+
 type Main
 	
 	state as integer
@@ -72,9 +89,13 @@ type Main
 	selTyp as integer // The selected typ.
 	selShp as Shape // The selected sprite to drop based on typ.
 	selY as float
-	startSpr as integer
-	startSpr2 as integer
 	phys as integer
+	readpath as string
+	writepath as string
+	levs as Level[]
+	smallbutImg as integer
+	startBut as Button
+	saveBut as Button
 	
 endtype
 
@@ -120,6 +141,12 @@ function maInit()
 	setVirtualResolution(ma.pw, ma.ph)
 	SetWindowSize(ma.pw, ma.ph, false)
 	SetWindowPosition(GetDeviceWidth() / 2 - GetWindowWidth() / 2, GetDeviceHeight() / 2 - GetWindowHeight() / 2)
+	
+	ma.readPath = GetReadPath()
+	ma.writePath = GetWritePath()
+	log("readpath=" + ma.readpath + ", writepath=" + ma.writepath)
+	
+	maLoadLevels()
 	
 	coInit()
 
@@ -196,18 +223,18 @@ function maInit()
 	ma.tickImg = loadimage("gfx/tick.png")
 	ma.playImg = loadimage("gfx/play.png")
 	ma.stopImg = loadimage("gfx/stop.png")
+	ma.smallButImg = loadimage("gfx/smallbut.png")
 	
-	ma.startSpr = CreateSprite(co.pixImg)
-	SetSpriteScale(ma.startSpr, ma.s * 2, ma.s * 2)
-	SetSpriteDepth(ma.startSpr, MA_DEPTH_EDIT)
-	coSetSpriteColor(ma.startSpr, co.grey[5])
-	SetSpritePositionByOffset(ma.startSpr, co.w - GetSpriteWidth(ma.startSpr) / 4 * 3, y)
+	buCreateBut(ma.startBut, ma.smallButImg, ma.playImg)
+	coSetSpriteColor(ma.startBut.bg, co.grey[5])
+	buSetButPos(ma.startBut, co.w - GetSpriteWidth(ma.startBut.bg) / 4 * 3, y)
 
-	ma.startSpr2 = CreateSprite(ma.playImg)
-	//SetSpriteScale(ma.startSpr2, ma.s, ma.s)
-	SetSpriteDepth(ma.startSpr2, MA_DEPTH_EDIT - 2)
-	SetSpritePositionByOffset(ma.startSpr2, GetSpriteXByOffset(ma.startSpr), GetSpriteYByOffset(ma.startSpr))
-	
+	buCreateBut(ma.saveBut, ma.smallButImg, 0)
+	coSetSpriteColor(ma.saveBut.bg, co.grey[7])
+	buSetButScale(ma.saveBut, 0.25, 0)
+	buSetButTx(ma.saveBut, DIR_C, "S", 0, 32)
+	buSetButPos(ma.saveBut, co.w - ma.s / 4, ma.s / 4)
+
 	ma.selSpr = createsprite(ma.tickImg)
 	SetSpriteScale(ma.selSpr, 0.5, 0.5)
 	SetSpriteVisible(ma.selSpr, false)
@@ -218,9 +245,105 @@ function maInit()
 	
 	maEdit(true)
 	maSelectShape()
-	
+		
 	ma.state = MA_STATE_EDIT
 	
+endfunction
+
+// ---------------------------
+// Load levels.
+//
+function maLoadLevels()
+	
+	local file as string
+	local s as string
+	local lev as Level
+	
+	setfolder("levs")
+	
+	file = GetFirstFile()
+	ma.levs.length = -1
+	
+	while file <> ""
+		
+		log("file=" + file)
+		
+		s = maLoadLevel(file)
+		lev.fromjson(s)
+		ma.levs.insert(lev)
+		
+		file = getnextfile()
+		
+	endwhile
+	
+	setfolder("/media")
+	
+endfunction
+
+// ---------------------------
+// Load a level.
+//
+function maLoadLevel(file as string)
+	
+	local fh as integer
+	local s as string
+	
+	fh = OpenToRead(file)
+	s = ReadLine(fh)
+	closefile(fh)
+	
+endfunction s
+
+// ---------------------------
+// Save level.
+//
+function maSaveLevel()
+	
+	local lev as Level
+	local ss as StoredShape
+	local nbr as integer
+	local name as string
+	local i as integer
+	local fh as integer
+	local s as string
+	
+	maLoadLevels()
+
+	lev.nbr = 0
+	
+	for i = 0 to ma.levs.length
+		if ma.levs[i].nbr > lev.nbr
+			lev.nbr = ma.levs[i].nbr
+		endif
+	next
+	
+	inc lev.nbr
+	
+	for i = 0 to ma.shps.length
+		
+		ss.typ = ma.shps[i].typ
+		ss.x = ma.shps[i].x
+		ss.y = ma.shps[i].y
+		ss.rot = ma.shps[i].rot
+		
+		lev.shps.insert(ss)
+		
+	next
+		
+	SetFolder("levs")
+	
+	name = str(lev.nbr) + ".txt"
+	fh = OpenToWrite(name)
+	s = lev.tojson()
+	s = ReplaceString(s, chr(10), " ", -1)
+	s = ReplaceString(s, " ", "", -1)
+	WriteLine(fh, s)
+	CloseFile(fh)
+	
+	setfolder("/media")
+	
+	ma.levs.insert(lev) // Add to the list.
+
 endfunction
 
 // ---------------------------
@@ -418,8 +541,10 @@ function maUpdateEdit()
 	
 	if in.ptrPressed
 		
-		if maStartPressed()
-			// Do nothing.
+		if buButPressed(ma.startBut)
+			maStart()
+		elseif buButPressed(ma.saveBut)
+			maSaveLevel()
 		elseif maSelectShape() = -1
 			maDropShape()
 		endif
@@ -435,35 +560,27 @@ endfunction
 // ---------------------------
 // Check if start is prssed.
 //
-function maStartPressed()
-	
-	local ret as integer
-	
-	ret = false
-	
-	if coGetSpriteHitTest4(ma.startSpr, in.ptrX, in.ptrY, 0)
+function maStart()
+					
+	if ma.phys
 		
-		if ma.phys
+		ma.phys = false
+		buSetButFg(ma.startBut, ma.playImg)
+		buUpdateButPos(ma.startBut)
+		maShowPhysics()
+		maResetShapes()
 			
-			ma.phys = false
-			SetSpriteImage(ma.startSpr2, ma.playImg)
-			maShowPhysics()
-			maResetShapes()
-			ret = true
-				
-		else
-			
-			ma.phys = true
-			SetSpriteImage(ma.startSpr2, ma.stopImg)
-			maShowPhysics()
+	else
+		
+		ma.phys = true
+		buSetButFg(ma.startBut, ma.stopImg)
+		buUpdateButPos(ma.startBut)
+		maShowPhysics()
 
-			ret = true
-
-		endif
 				
 	endif
 
-endfunction ret
+endfunction
 
 // ---------------------------
 // Turn on or off physics.
