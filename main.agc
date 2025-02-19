@@ -82,7 +82,7 @@ global ma as Main
 
 maInit()
 //maCreateLevel(1)
-SetPhysicsDebugOn()
+//SetPhysicsDebugOn()
 
 do
 	
@@ -255,8 +255,8 @@ function maGrid()
 	local spr as integer
 	local cell as Cell
 	
-	col1 = co.grey[8]
-	col2 = co.grey[9]
+	col1 = makecolor(47, 47, 47) // co.grey[8]
+	col2 = makecolor(31, 31, 31) // co.grey[9]
 	py = ma.oy * ma.s
 	
 	for y = 0 to ma.h - 1
@@ -544,47 +544,42 @@ function maRotateShape(shp ref as Shape)
 	if shp.typ = MA_SHP_I or shp.typ = MA_SHP_J or shp.typ = MA_SHP_S or shp.typ = MA_SHP_Z
 		
 		if shp.rot = 0
-			
-			shp.rot = 1
-			SetSpriteAngle(shp.spr, 90)
-	
+			shp.rot = 1	
 		elseif shp.rot = 1
-			
-			shp.rot = 0
-			SetSpriteAngle(shp.spr, 0)
-			
+			shp.rot = 0			
 		endif
-		
-		SetSpriteShader(shp.spr, 3)
-
 	elseif shp.typ = MA_SHP_J or shp.typ = MA_SHP_L or shp.typ = MA_SHP_T
-		
 		if shp.rot = 0
-			
-			shp.rot = 1
-			SetSpriteAngle(shp.spr, 90)
-	
+			shp.rot = 1	
 		elseif shp.rot = 1
-			
 			shp.rot = 2
-			SetSpriteAngle(shp.spr, 180)
-			
 		elseif shp.rot = 2
-			
 			shp.rot = 3
-			SetSpriteAngle(shp.spr, 270)
-			
 		elseif shp.rot = 3
-		
-			shp.rot = 0
-			SetSpriteAngle(shp.spr, 0)
-			
-		endif
-		
-		SetSpriteShader(shp.spr, 3)
-		
+			shp.rot = 0			
+		endif		
 	endif
+	
+	maSetRotateShape(shp)
+	SetSpriteShape(shp.spr, 3)
 		
+endfunction
+
+// ---------------------------
+// Rotate selected shape.
+//
+function maSetRotateShape(shp ref as Shape)
+	
+	if shp.rot = 0		
+		SetSpriteAngle(shp.spr, 0)
+	elseif shp.rot = 1		
+		SetSpriteAngle(shp.spr, 90)		
+	elseif shp.rot = 2		
+		SetSpriteAngle(shp.spr, 180)		
+	elseif shp.rot = 3	
+		SetSpriteAngle(shp.spr, 270)		
+	endif
+						
 endfunction
 
 // ---------------------------
@@ -597,7 +592,8 @@ function maDropShape()
 	if ma.selTyp // Not deleting.
 		
 		ma.shps.insert(ma.selShp)
-		//SetSpriteVisible(ma.selShp.spr, false)
+		
+		// Clear for next.
 		ma.selShp.typ = MA_SHP_X
 		ma.selShp.spr = 0
 		ma.selTyp = 0
@@ -649,7 +645,10 @@ function maResetShapes()
 	local i as integer
 	
 	for i = 0 to ma.shps.length
+		
+		maSetRotateShape(ma.shps[i])
 		maPosShape(ma.shps[i])
+		
 	next
 
 endfunction
@@ -697,23 +696,6 @@ function maHoverCell()
 			ma.selShp.y = ma.cells[idx].y
 
 			maPosShape(ma.selShp)
-			
-			/*
-			if ma.selShp.rot = 1 or ma.selShp.rot = 3	
-				
-				h = getspritewidth(ma.selShp.spr)
-				w = GetSpriteHeight(ma.selShp.spr)
-				SetSpritePositionByOffset(ma.selShp.spr, (ma.ox + ma.selShp.x) * ma.s + w / 2, (ma.oy + ma.selShp.y) * ma.s + h / 2)	
-				
-			else	
-						
-				w = getspritewidth(ma.selShp.spr)
-				h = GetSpriteHeight(ma.selShp.spr)
-				SetSpritePositionByOffset(ma.selShp.spr, (ma.ox + ma.selShp.x) * ma.s + w / 2, (ma.oy + ma.selShp.y) * ma.s + h / 2)	
-				
-			endif
-			*/
-			
 			SetSpriteVisible(ma.selShp.spr, true)
 			
 
