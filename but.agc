@@ -2,6 +2,10 @@
 // BUTTON CODE.
 // -------------------------------------------------------
 
+#constant BU_DEPTH_TX = 100
+#constant BU_DEPTH_FG = 200
+#constant BU_DEPTH_BG = 300
+
 type Text
 	
 	dir as integer
@@ -90,11 +94,17 @@ endfunction
 function buSetButPos(but ref as Button, x as float, y as float)
 	
 	if but.fg	
+		
 		SetSpritePositionByOffset(but.fg, x, y)
+		SetSpriteDepth(but.fg, BU_DEPTH_FG)
+		
 	endif
 			
-	if but.bg			
-		SetSpritePositionByOffset(but.bg, x, y)		
+	if but.bg
+					
+		SetSpritePositionByOffset(but.bg, x, y)	
+		SetSpriteDepth(but.bg, BU_DEPTH_BG)
+	
 	endif
 	
 	buSetTxPos(but, -1, x, y)
@@ -148,6 +158,7 @@ function buSetTxPos(but ref as Button, idx as integer, x as float, y as float)
 		endif
 		
 		SetTextPosition(but.txs[i].tx, xx, yy)
+		SetSpriteDepth(but.fg, BU_DEPTH_TX)
 		
 	next
 
@@ -198,6 +209,27 @@ function buSetButFg(but ref as Button, fgImg as integer)
 		but.bg = 0
 		
 	endif
+
+endfunction
+
+// -------------------------------------------------------
+// Fit the fg icon into the bg.
+// If scale is 0, fit it.
+// border specify a edge around the sprite if scale = 0, otherwise ignored.
+//
+function buFitFg(but ref as Button, scale as float, border as float)
+	
+	local sx as float
+	local sy as float
+	local s as float
+	
+	SetSpriteScale(but.fg, 1, 1)
+	sx = (GetSpriteWidth(but.fg) + border) / getspritewidth(but.bg)        
+	sy = (GetSpriteHeight(but.fg) + border) / getspriteheight(but.bg)
+	s = coMaxValue(sx, sy)
+	s = (1.0 / s) * 0.8
+	
+	SetSpriteScale(but.fg, s, s)
 
 endfunction
 

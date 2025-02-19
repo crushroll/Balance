@@ -84,8 +84,9 @@ type Main
 	tickImg as integer
 	playImg as integer
 	stopImg as integer
-	buts as Shape[]
-	selSpr as integer
+	buts as Button[]
+	sels as Shape[] // The selector shapes.
+	//selSpr as integer
 	selTyp as integer // The selected typ.
 	selShp as Shape // The selected sprite to drop based on typ.
 	selY as float
@@ -128,6 +129,7 @@ function maInit()
 	local yy as float
 	local w as float
 	local h as float
+	local but as Button
 
 	
 	ma.s = 64
@@ -139,8 +141,11 @@ function maInit()
 	ma.ph = (ma.h + ma.oy) * ma.s
 	
 	setVirtualResolution(ma.pw, ma.ph)
-	SetWindowSize(ma.pw, ma.ph, false)
-	SetWindowPosition(GetDeviceWidth() / 2 - GetWindowWidth() / 2, GetDeviceHeight() / 2 - GetWindowHeight() / 2)
+	h = GetDeviceHeight()
+	h = h * 0.95
+	w = h / (ma.ph / ma.pw)
+	SetWindowSize(w, h, false)
+	//SetWindowPosition(GetDeviceWidth() / 2 - GetWindowWidth() / 2, GetDeviceHeight() / 2 - GetWindowHeight() / 2)
 	
 	ma.readPath = GetReadPath()
 	ma.writePath = GetWritePath()
@@ -165,69 +170,63 @@ function maInit()
 	for i = 0 to ma.typNam.length
 		ma.typImg[i] = loadimage("gfx/" + ma.typNam[i] + ".png")		
 	next
-	
-	maCreateShape(shp, MA_SHP_X, 0, 0)
-	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_I, 0, 0)
-	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_J, 0, 0)
-	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_L, 0, 0)
-	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_O, 0, 0)
-	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_S, 0, 0)
-	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_T, 0, 0)
-	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_Z, 0, 0)
-	ma.buts.insert(shp)
-	maCreateShape(shp, MA_SHP_B, 0, 0)
-	ma.buts.insert(shp)
-	
-	maGrid()
-
-	x = ma.s
-	y = (ma.s * ma.oy) / 2
-	w = ma.s * 2
-	h = ma.s * 2
-	
-	ma.selY = y + ma.s
-	
-	for i = 0 to ma.buts.length
-				
-		if i = MA_SHP_X
-			SetSpriteScale(ma.buts[i].spr, 1, 1)	
-		elseif i = MA_SHP_B	
-			SetSpriteScale(ma.buts[i].spr, 0.1, 0.1)
-		else	
-			SetSpriteScale(ma.buts[i].spr, 0.5, 0.5)	
-		endif
-		
-		SetSpriteDepth(ma.buts[i].spr, MA_DEPTH_SEL)
-		SetSpriteVisible(ma.buts[i].spr, false)
-		SetSpritePositionByOffset(ma.buts[i].spr, x, y)
-		
-		xx = GetSpriteXByOffset(ma.buts[i].spr)
-		yy = GetSpriteYByOffset(ma.buts[i].spr)
-				
-		ma.buts[i].rect.x = xx - w / 2
-		ma.buts[i].rect.y = yy - h / 2
-		ma.buts[i].rect.w = w
-		ma.buts[i].rect.h = h
-
-		inc x, ma.s * 1.9
-		
-	next
 
 	ma.tickImg = loadimage("gfx/tick.png")
 	ma.playImg = loadimage("gfx/play.png")
 	ma.stopImg = loadimage("gfx/stop.png")
 	ma.smallButImg = loadimage("gfx/smallbut.png")
 	
+	maCreateShape(shp, MA_SHP_X, 0, 0)
+	ma.sels.insert(shp)
+	maCreateShape(shp, MA_SHP_I, 0, 0)
+	ma.sels.insert(shp)
+	maCreateShape(shp, MA_SHP_J, 0, 0)
+	ma.sels.insert(shp)
+	maCreateShape(shp, MA_SHP_L, 0, 0)
+	ma.sels.insert(shp)
+	maCreateShape(shp, MA_SHP_O, 0, 0)
+	ma.sels.insert(shp)
+	maCreateShape(shp, MA_SHP_S, 0, 0)
+	ma.sels.insert(shp)
+	maCreateShape(shp, MA_SHP_T, 0, 0)
+	ma.sels.insert(shp)
+	maCreateShape(shp, MA_SHP_Z, 0, 0)
+	ma.sels.insert(shp)
+	maCreateShape(shp, MA_SHP_B, 0, 0)
+	ma.sels.insert(shp)
+	
+	maGrid()
+
+	x = ma.s + 8
+	y = (ma.s * ma.oy) / 2
+	w = ma.s * 2
+	h = ma.s * 2
+	
+	ma.selY = y + ma.s
+	
+	for i = 0 to ma.sels.length
+				
+		buCreateBut(but, ma.smallButImg, 0)
+		but.fg = ma.sels[i].spr
+		buSetButScale(but, 0.9, 0.9)
+		
+		if i = MA_SHP_X or i = MA_SHP_O
+			buFitFg(but, 0, 32)
+		else
+			buFitFg(but, 0, 0)
+		endif
+		
+		coSetSpriteColor(but.bg, co.grey[5])
+		buSetButPos(but, x, y)
+		ma.buts.insert(but)
+
+		inc x, ma.s * 1.9
+		
+	next
+	
 	buCreateBut(ma.startBut, ma.smallButImg, ma.playImg)
 	coSetSpriteColor(ma.startBut.bg, co.grey[5])
-	buSetButPos(ma.startBut, co.w - GetSpriteWidth(ma.startBut.bg) / 4 * 3, y)
+	buSetButPos(ma.startBut, co.w - GetSpriteWidth(ma.startBut.bg) / 2 - 16, y)
 
 	buCreateBut(ma.saveBut, ma.smallButImg, 0)
 	coSetSpriteColor(ma.saveBut.bg, co.grey[7])
@@ -235,9 +234,9 @@ function maInit()
 	buSetButTx(ma.saveBut, DIR_C, "S", 0, 32)
 	buSetButPos(ma.saveBut, co.w - ma.s / 4, ma.s / 4)
 
-	ma.selSpr = createsprite(ma.tickImg)
-	SetSpriteScale(ma.selSpr, 0.5, 0.5)
-	SetSpriteVisible(ma.selSpr, false)
+	//ma.selSpr = createsprite(ma.tickImg)
+	//SetSpriteScale(ma.selSpr, 0.5, 0.5)
+	//SetSpriteVisible(ma.selSpr, false)
 	
 	ma.selTyp = 0
 	ma.selShp.typ = MA_SHP_X
@@ -424,11 +423,12 @@ function maEdit(vis as integer)
 	local i as integer
 	
 	for i = 0 to ma.buts.length	
-		SetSpriteVisible(ma.buts[i].spr, vis)
+		//SetSpriteVisible(ma.buts[i].spr, vis)
+		buSetButVis(ma.buts[i], vis)
 	next
 	
-	SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.buts[ma.selTyp].spr), GetSpriteYByOffset(ma.buts[ma.selTyp].spr))
-	SetSpriteVisible(ma.selSpr, true)
+	//SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.buts[ma.selTyp].spr), GetSpriteYByOffset(ma.buts[ma.selTyp].spr))
+	//SetSpriteVisible(ma.selSpr, true)
 
 endfunction
 
@@ -626,19 +626,19 @@ function maSelectShape()
 	
 	for i = 0 to ma.buts.length
 		
-		//if coGetSpriteHitTest4(ma.buts[i].spr, in.ptrX, in.ptrY, 0)
-		if coPointWithinRect2(in.ptrX, in.ptrY, ma.buts[i].rect)
+		//if coPointWithinRect2(in.ptrX, in.ptrY, ma.buts[i].rect)
+		if buButPressed(ma.buts[i])
 			
 			if i = ma.selTyp
 				if i > 0				
-					maRotateShape(ma.buts[ma.selTyp])					
+					maRotateShape(ma.sels[ma.selTyp])					
 				endif
 			else
 				ma.selTyp = i
 			endif
 				
 			if ma.selTyp
-				maCloneShape(ma.buts[ma.selTyp], ma.selShp)
+				maCloneShape(ma.sels[ma.selTyp], ma.selShp)
 			endif
 			
 			idx = i
@@ -649,7 +649,14 @@ function maSelectShape()
 		
 	next
 	
-	SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.buts[ma.selTyp].spr), ma.selY)
+	//SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.sels[ma.selTyp].spr), ma.selY)
+	//SetSpriteVisible(ma.selSpr, true)
+	
+	for i = 0 to ma.buts.length
+		coSetSpriteColor(ma.buts[i].bg, co.grey[5])
+	next
+	
+	coSetSpriteColor(ma.buts[ma.selTyp].bg, co.blue[5])
 		
 endfunction idx
 

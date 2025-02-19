@@ -9,8 +9,8 @@ FILE_2=main.agc;-1
 FILE_3=but.agc;-1
 
 [files]
-FILE_NAME_0=1;main.agc;235;0
-FILE_NAME_1=0;but.agc;0;1
+FILE_NAME_0=1;main.agc;175;0
+FILE_NAME_1=0;but.agc;82;1
 
 [watchvariables]
 watch_variable=@Version;
