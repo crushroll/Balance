@@ -23,6 +23,7 @@
 #constant MA_SHP_S = 5
 #constant MA_SHP_T = 6
 #constant MA_SHP_Z = 7
+#constant MA_SHP_B = 8 // Bar, static.
 
 type Cell
 	
@@ -43,6 +44,7 @@ type Shape
 	rot as integer // 0, 1, 2, 3
 	spr as integer
 	phys as integer // Determines whether physics is on.
+	rect as Rect
 	
 endtype
 
@@ -63,12 +65,16 @@ type Main
 	typCol as integer[]
 	typImg as integer[8]
 	tickImg as integer
+	playImg as integer
+	stopImg as integer
 	buts as Shape[]
 	selSpr as integer
 	selTyp as integer // The selected typ.
 	selShp as Shape // The selected sprite to drop based on typ.
+	selY as float
 	startSpr as integer
-	startTx as integer
+	startSpr2 as integer
+	phys as integer
 	
 endtype
 
@@ -97,14 +103,19 @@ function maInit()
 	local x as float
 	local y as float
 	local shp as Shape
+	local xx as float
+	local yy as float
+	local w as float
+	local h as float
+
 	
-	ma.s = 32
+	ma.s = 64
 	ma.w = 20
 	ma.h = 20
-	ma.pw = (ma.w + 2) * ma.s
-	ma.ph = (ma.h + 3) * ma.s
-	ma.ox = 1
-	ma.oy = 2
+	ma.ox = 0
+	ma.oy = 3
+	ma.pw = (ma.w + ma.ox) * ma.s
+	ma.ph = (ma.h + ma.oy) * ma.s
 	
 	setVirtualResolution(ma.pw, ma.ph)
 	SetWindowSize(ma.pw, ma.ph, false)
@@ -112,7 +123,7 @@ function maInit()
 	
 	coInit()
 
-	ma.typNam = [ "X", "I", "J", "L", "O", "S", "T", "Z" ]
+	ma.typNam = [ "X", "I", "J", "L", "O", "S", "T", "Z", "B" ]
 	
 	ma.typCol.insert(makecolor(255, 255, 255))
 	ma.typCol.insert(makecolor(0, 255, 255))
@@ -122,6 +133,7 @@ function maInit()
 	ma.typCol.insert(makecolor(0, 255, 0))
 	ma.typCol.insert(makecolor(255, 0, 255))
 	ma.typCol.insert(makecolor(255, 0, 0))
+	ma.typCol.insert(makecolor(255, 255, 255))
 	
 	for i = 0 to ma.typNam.length
 		ma.typImg[i] = loadimage("gfx/" + ma.typNam[i] + ".png")		
@@ -143,39 +155,70 @@ function maInit()
 	ma.buts.insert(shp)
 	maCreateShape(shp, MA_SHP_Z, 0, 0)
 	ma.buts.insert(shp)
+	maCreateShape(shp, MA_SHP_B, 0, 0)
+	ma.buts.insert(shp)
 	
 	maGrid()
 
 	x = ma.s
-	y = ma.s
+	y = (ma.s * ma.oy) / 2
+	w = ma.s * 2
+	h = ma.s * 2
+	
+	ma.selY = y + ma.s
 	
 	for i = 0 to ma.buts.length
+				
+		if i = MA_SHP_X
+			SetSpriteScale(ma.buts[i].spr, 1, 1)	
+		elseif i = MA_SHP_B	
+			SetSpriteScale(ma.buts[i].spr, 0.1, 0.1)
+		else	
+			SetSpriteScale(ma.buts[i].spr, 0.5, 0.5)	
+		endif
 		
-		SetSpriteScale(ma.buts[i].spr, 0.25, 0.25)
-		SetSpritePositionByOffset(ma.buts[i].spr, x, y)
-		inc x, GetSpriteWidth(ma.buts[i].spr) + ma.s
 		SetSpriteDepth(ma.buts[i].spr, MA_DEPTH_SEL)
 		SetSpriteVisible(ma.buts[i].spr, false)
+		SetSpritePositionByOffset(ma.buts[i].spr, x, y)
+		
+		xx = GetSpriteXByOffset(ma.buts[i].spr)
+		yy = GetSpriteYByOffset(ma.buts[i].spr)
+				
+		ma.buts[i].rect.x = xx - w / 2
+		ma.buts[i].rect.y = yy - h / 2
+		ma.buts[i].rect.w = w
+		ma.buts[i].rect.h = h
+
+		inc x, ma.s * 1.9
 		
 	next
+
+	ma.tickImg = loadimage("gfx/tick.png")
+	ma.playImg = loadimage("gfx/play.png")
+	ma.stopImg = loadimage("gfx/stop.png")
 	
 	ma.startSpr = CreateSprite(co.pixImg)
-	SetSpriteScale(ma.startSpr, ma.s * 2, ma.s)
-	SetSpritePositionByOffset(ma.startSpr, co.w - GetSpriteWidth(ma.startSpr) / 4 * 3, GetSpriteHeight(ma.startSpr))
-	ma.startTx = coCreateText("Start", 0, 30)
-	SetTextAlignment(ma.startTx, 1)
-	coSetTextColor(ma.startTx, co.black)
-	SetTextPosition(ma.startTx, GetSpriteXByOffset(ma.startSpr), GetSpriteYByOffset(ma.startSpr) - GetTextTotalHeight(ma.startTx) / 2)
+	SetSpriteScale(ma.startSpr, ma.s * 2, ma.s * 2)
+	SetSpriteDepth(ma.startSpr, MA_DEPTH_EDIT)
+	coSetSpriteColor(ma.startSpr, co.grey[5])
+	SetSpritePositionByOffset(ma.startSpr, co.w - GetSpriteWidth(ma.startSpr) / 4 * 3, y)
+
+	ma.startSpr2 = CreateSprite(ma.playImg)
+	//SetSpriteScale(ma.startSpr2, ma.s, ma.s)
+	SetSpriteDepth(ma.startSpr2, MA_DEPTH_EDIT - 2)
+	SetSpritePositionByOffset(ma.startSpr2, GetSpriteXByOffset(ma.startSpr), GetSpriteYByOffset(ma.startSpr))
 	
-	ma.tickImg = loadimage("gfx/tick.png")
 	ma.selSpr = createsprite(ma.tickImg)
 	SetSpriteScale(ma.selSpr, 0.5, 0.5)
 	SetSpriteVisible(ma.selSpr, false)
 	
 	ma.selTyp = 0
 	ma.selShp.typ = MA_SHP_X
+	ma.phys = false
 	
 	maEdit(true)
+	maSelectShape()
+	
 	ma.state = MA_STATE_EDIT
 	
 endfunction
@@ -301,13 +344,9 @@ function maCreateShape(shp ref as Shape, typ as integer, x as integer, y as inte
 	coSetSpriteColor(spr, ma.typCol[typ])
 	SetSpriteDepth(spr, MA_DEPTH_SHAPE)
 	SetSpriteShape(spr, 3)
-	SetSpritePhysicsGravityScale(spr, 10)
-	
-	if not shp.phys
-		SetSpritePhysicsOn(spr, 1)
-	else
-		SetSpritePhysicsOn(spr, 2)
-	endif
+		
+	//setSpritePhysicsGravityScale(spr, 10)
+	//SetSpritePhysicsOn(spr, 2)
 	
 	shp.spr = spr
 
@@ -340,16 +379,11 @@ function maCloneShape(shp ref as Shape, clone ref as Shape)
 	clone.rot = shp.rot
 	
 	clone.spr = CloneSprite(shp.spr)
-	SetSpriteScale(clone.spr, 0.5, 0.5)
+	SetSpriteScale(clone.spr, 1, 1) // 0.5, 0.5)
 	SetSpriteDepth(clone.spr, MA_DEPTH_SHAPE)
 	SetSpriteShape(clone.spr, 3)
-	SetSpritePhysicsGravityScale(clone.spr, 10)
-
-	if not clone.phys
-		SetSpritePhysicsOn(clone.spr, 1)
-	else
-		SetSpritePhysicsOn(clone.spr, 2)
-	endif
+	//SetSpritePhysicsGravityScale(clone.spr, 10)
+	//SetSpritePhysicsOff(clone.spr)
 
 	SetSpriteVisible(clone.spr, false)
 	
@@ -403,10 +437,64 @@ endfunction
 //
 function maStartPressed()
 	
-	//if coGetSpriteHitTest4(ma.buts[i].spr, in.ptrX, in.ptrY, 0)
-	//endif
+	local ret as integer
+	
+	ret = false
+	
+	if coGetSpriteHitTest4(ma.startSpr, in.ptrX, in.ptrY, 0)
+		
+		if ma.phys
+			
+			ma.phys = false
+			SetSpriteImage(ma.startSpr2, ma.playImg)
+			maShowPhysics()
+			maResetShapes()
+			ret = true
+				
+		else
+			
+			ma.phys = true
+			SetSpriteImage(ma.startSpr2, ma.stopImg)
+			maShowPhysics()
 
-endfunction false
+			ret = true
+
+		endif
+				
+	endif
+
+endfunction ret
+
+// ---------------------------
+// Turn on or off physics.
+//
+function maShowPhysics()
+	
+	local i as integer
+	
+	if ma.phys
+				
+		for i = 0 to ma.shps.length
+			
+			SetSpritePhysicsGravityScale(ma.shps[i].spr, 10)
+			
+			if ma.shps[i].typ = MA_SHP_B
+				SetSpritePhysicsOn(ma.shps[i].spr, 1)
+			else
+				SetSpritePhysicsOn(ma.shps[i].spr, 2)
+			endif
+
+		next
+		
+	else
+				
+		for i = 0 to ma.shps.length
+			SetSpritePhysicsOff(ma.shps[i].spr)
+		next
+			
+	endif
+	
+endfunction
 
 // ---------------------------
 // Check if selecting a shape at the top.
@@ -421,7 +509,8 @@ function maSelectShape()
 	
 	for i = 0 to ma.buts.length
 		
-		if coGetSpriteHitTest4(ma.buts[i].spr, in.ptrX, in.ptrY, 0)
+		//if coGetSpriteHitTest4(ma.buts[i].spr, in.ptrX, in.ptrY, 0)
+		if coPointWithinRect2(in.ptrX, in.ptrY, ma.buts[i].rect)
 			
 			if i = ma.selTyp
 				if i > 0				
@@ -430,9 +519,7 @@ function maSelectShape()
 			else
 				ma.selTyp = i
 			endif
-			
-			SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.buts[ma.selTyp].spr), GetSpriteYByOffset(ma.buts[ma.selTyp].spr))
-	
+				
 			if ma.selTyp
 				maCloneShape(ma.buts[ma.selTyp], ma.selShp)
 			endif
@@ -444,6 +531,8 @@ function maSelectShape()
 		endif
 		
 	next
+	
+	SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.buts[ma.selTyp].spr), ma.selY)
 		
 endfunction idx
 
@@ -553,13 +642,50 @@ function maFindCell()
 endfunction idx
 
 // ---------------------------
+// Reposition all shapes.
+//
+function maResetShapes()
+	
+	local i as integer
+	
+	for i = 0 to ma.shps.length
+		maPosShape(ma.shps[i])
+	next
+
+endfunction
+
+// ---------------------------
+// Position the shape to it's x, y position.
+//
+function maPosShape(shp ref as Shape)
+	
+	local w as float
+	local h as float
+
+	if shp.rot = 1 or shp.rot = 3	
+		
+		h = getspritewidth(shp.spr)
+		w = GetSpriteHeight(shp.spr)
+		SetSpritePositionByOffset(shp.spr, (ma.ox + shp.x) * ma.s + w / 2, (ma.oy + shp.y) * ma.s + h / 2)	
+		
+	else	
+				
+		w = getspritewidth(shp.spr)
+		h = GetSpriteHeight(shp.spr)
+		SetSpritePositionByOffset(shp.spr, (ma.ox + shp.x) * ma.s + w / 2, (ma.oy + shp.y) * ma.s + h / 2)	
+		
+	endif
+	
+endfunction
+
+// ---------------------------
 // Hover over a cell, with a shape color.
 //
 function maHoverCell()
 	
 	local idx as integer
-	local w as float
-	local h as float
+	//local w as float
+	//local h as float
 	
 	if ma.selTyp
 		
@@ -570,6 +696,9 @@ function maHoverCell()
 			ma.selShp.x = ma.cells[idx].x
 			ma.selShp.y = ma.cells[idx].y
 
+			maPosShape(ma.selShp)
+			
+			/*
 			if ma.selShp.rot = 1 or ma.selShp.rot = 3	
 				
 				h = getspritewidth(ma.selShp.spr)
@@ -583,6 +712,7 @@ function maHoverCell()
 				SetSpritePositionByOffset(ma.selShp.spr, (ma.ox + ma.selShp.x) * ma.s + w / 2, (ma.oy + ma.selShp.y) * ma.s + h / 2)	
 				
 			endif
+			*/
 			
 			SetSpriteVisible(ma.selShp.spr, true)
 			
