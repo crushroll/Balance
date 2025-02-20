@@ -125,15 +125,16 @@ type Main
 	lev as integer
 	time as integer
 	score as integer
+	shape as integer
 	
 endtype
 
 global ma as Main
 
 maInit()
-maMenu()
+maTitle()
 //maPlay()
-//SetPhysicsDebugOn()
+SetPhysicsDebugOn()
 
 do
 	
@@ -169,6 +170,7 @@ function maInit()
 	ma.oy = 3
 	ma.pw = (ma.w + ma.ox) * ma.s
 	ma.ph = (ma.h + ma.oy) * ma.s
+	ma.shape = 3
 	
 	setVirtualResolution(ma.pw, ma.ph)
 	h = GetDeviceHeight()
@@ -571,15 +573,21 @@ endfunction
 // ---------------------------
 // Show the menu.
 //
-function maMenu()
+function maTitle()
 	
 	local i as integer
+	
+	maclean()
 	
 	for i = 0 to ma.buts.length	
 		buSetButVis(ma.buts[i], false)
 	next
 
+	buSetButVis(ma.levBut, false)
+	buSetButVis(ma.timeBut, false)
+	buSetButVis(ma.scoreBut, false)	
 	buSetButVis(ma.startBut, false)
+	buSetButVis(ma.saveBut, false)
 	
 	for i = 0 to ma.cells.length
 		SetSpriteVisible(ma.cells[i].spr, false)
@@ -694,7 +702,7 @@ function maDrawLevel()
 	
 	maClean()
 	
-	if ma.lev <= ma.levs.length
+	if ma.lev <= ma.levs.length + 1
 		
 		lev = ma.lev - 1
 		
@@ -734,7 +742,7 @@ function maCreateShape(shp ref as Shape, typ as integer, x as integer, y as inte
 	SetSpritePositionByOffset(spr, x * ma.s, y * ma.s)
 	coSetSpriteColor(spr, ma.typCol[typ])
 	SetSpriteDepth(spr, MA_DEPTH_SHAPE)
-	SetSpriteShape(spr, 3)
+	SetSpriteShape(spr, ma.shape)
 		
 	shp.spr = spr
 
@@ -769,7 +777,7 @@ function maCloneShape(shp ref as Shape, clone ref as Shape)
 	clone.spr = CloneSprite(shp.spr)
 	SetSpriteScale(clone.spr, 1, 1) // 0.5, 0.5)
 	SetSpriteDepth(clone.spr, MA_DEPTH_SHAPE)
-	SetSpriteShape(clone.spr, 3)
+	SetSpriteShape(clone.spr, ma.shape)
 	SetSpriteVisible(clone.spr, false)
 	
 endfunction
@@ -834,7 +842,9 @@ function maUpdateEdit()
 	inUpdate()
 	
 	if in.ptrPressed	
-		if buButPressed(ma.startBut)
+		if buButPressed(ma.backBut)
+			maTitle()
+		elseif buButPressed(ma.startBut)
 			maStart()
 		elseif buButPressed(ma.saveBut)
 			maSaveLevel()
@@ -855,7 +865,9 @@ function maUpdatePlay()
 	inUpdate()
 	
 	if in.ptrPressed	
-		if buButPressed(ma.startBut)
+		if buButPressed(ma.backBut)
+			maTitle()
+		elseif buButPressed(ma.startBut)
 			maStart()
 		elseif maSelectShape() = -1
 			maDropShape()
@@ -902,7 +914,8 @@ function maShowPhysics()
 				
 		for i = 0 to ma.shps.length
 			
-			SetSpritePhysicsGravityScale(ma.shps[i].spr, 10)
+			//SetSpritePhysicsVelocity(ma.shps[i].spr, 0, 0)
+			//SetSpritePhysicsGravityScale(ma.shps[i].spr, 10)
 			SetSpritePhysicsOn(ma.shps[i].spr, 2)
 
 		next
@@ -930,7 +943,6 @@ function maSelectShape()
 	
 	for i = 0 to ma.buts.length
 		
-		//if coPointWithinRect2(in.ptrX, in.ptrY, ma.buts[i].rect)
 		if buButPressed(ma.buts[i])
 			
 			if i = ma.selTyp
@@ -952,10 +964,7 @@ function maSelectShape()
 		endif
 		
 	next
-	
-	//SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.sels[ma.selTyp].spr), ma.selY)
-	//SetSpriteVisible(ma.selSpr, true)
-	
+		
 	for i = 0 to ma.buts.length
 		coSetSpriteColor(ma.buts[i].bg, ma.butCol)
 	next
@@ -989,7 +998,7 @@ function maRotateShape(shp ref as Shape)
 	endif
 	
 	maSetRotateShape(shp)
-	SetSpriteShape(shp.spr, 3)
+	SetSpriteShape(shp.spr, ma.shape)
 		
 endfunction
 
@@ -1022,10 +1031,10 @@ function maDropShape()
 		ma.shps.insert(ma.selShp)
 		
 		// Clear for next.
-		ma.selShp.typ = MA_SHP_X
+		//ma.selShp.typ = MA_SHP_X
 		ma.selShp.spr = 0
-		ma.selTyp = 0
-		
+		maCloneShape(ma.sels[ma.selTyp], ma.selShp)
+				
 	else // Delete?
 		
 		for i = 0 to ma.shps.length
