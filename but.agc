@@ -158,7 +158,7 @@ function buSetTxPos(but ref as Button, idx as integer, x as float, y as float)
 		endif
 		
 		SetTextPosition(but.txs[i].tx, xx, yy)
-		SetSpriteDepth(but.fg, BU_DEPTH_TX)
+		SettextDepth(but.txs[i].tx, BU_DEPTH_TX)
 		
 	next
 
@@ -282,13 +282,13 @@ function buSetButTx(but ref as Button, dir as integer, text as string, font as i
 
 	if text <> ""
 		
-		if font < 0
-			font = 0
-		endif
+		//if font < 0
+		//	font = 0
+		//endif
 		
-		if size < 0
-			size = 0
-		endif
+		//if size < 0
+		//	size = 0
+		//endif
 				
 		if idx = -1 // New, add it.
 			
@@ -299,16 +299,16 @@ function buSetButTx(but ref as Button, dir as integer, text as string, font as i
 			endif
 			
 			tx.text = text
-			tx.font = font
-			tx.size = size
+			if font >= 0 then tx.font = font
+			if size >= 0 then tx.size = size
 			but.txs.insert(tx)
 			idx = but.txs.length
 			
 		else // Existing, update.
 			
 			but.txs[idx].text = text		
-			but.txs[idx].font = font
-			but.txs[idx].size = size
+			if font >= 0 then but.txs[idx].font = font
+			if size >= 0 then but.txs[idx].size = size
 			
 		endif
 		

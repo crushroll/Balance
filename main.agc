@@ -9,8 +9,9 @@
 #include "but.agc"
 
 #constant MA_STATE_NONE = 0
-#constant MA_STATE_EDIT = 1
-#constant MA_STATE_PLAY = 2
+#constant MA_STATE_TITLE = 1
+#constant MA_STATE_EDIT = 2
+#constant MA_STATE_PLAY = 3
 
 #constant MA_DEPTH_SHAPE = 1800
 #constant MA_DEPTH_SEL = 1900
@@ -24,7 +25,6 @@
 #constant MA_SHP_S = 5
 #constant MA_SHP_T = 6
 #constant MA_SHP_Z = 7
-#constant MA_SHP_B = 8 // Bar, static.
 
 type Cell
 	
@@ -32,7 +32,7 @@ type Cell
 	y as integer
 	rect as Rect
 	spr as integer
-	tx as integer
+	//tx as integer
 	col as integer
 	
 endtype
@@ -61,7 +61,18 @@ endtype
 type Level
 	
 	nbr as integer
+	time as integer
 	shps as StoredShape[] // String shape.
+	parts as integer[MA_SHP_Z] // Space for the number of each shape avail to unbuild the level.
+	
+endtype
+
+type LevelState
+	
+	nbr as integer
+	dt as string
+	time as integer
+	score as integer
 	
 endtype
 
@@ -84,9 +95,10 @@ type Main
 	tickImg as integer
 	playImg as integer
 	stopImg as integer
+	backImg as integer
+	editImg as integer
 	buts as Button[]
 	sels as Shape[] // The selector shapes.
-	//selSpr as integer
 	selTyp as integer // The selected typ.
 	selShp as Shape // The selected sprite to drop based on typ.
 	selY as float
@@ -94,16 +106,33 @@ type Main
 	readpath as string
 	writepath as string
 	levs as Level[]
-	smallbutImg as integer
+	levStates as LevelState[]
+	levButs as Button[]
+	title as integer
+	sbutImg as integer
+	mButImg as integer
+	lButImg as integer
+	xlButImg as integer
 	startBut as Button
 	saveBut as Button
+	levBut as Button
+	timeBut as Button
+	scoreBut as Button
+	backBut as Button
+	editBut as Button
+	butCol as integer
+	selButCol as integer
+	lev as integer
+	time as integer
+	score as integer
 	
 endtype
 
 global ma as Main
 
 maInit()
-//maCreateLevel(1)
+maMenu()
+//maPlay()
 //SetPhysicsDebugOn()
 
 do
@@ -130,7 +159,8 @@ function maInit()
 	local w as float
 	local h as float
 	local but as Button
-
+	local gap as float
+	local sc as float
 	
 	ma.s = 64
 	ma.w = 20
@@ -147,15 +177,15 @@ function maInit()
 	SetWindowSize(w, h, false)
 	//SetWindowPosition(GetDeviceWidth() / 2 - GetWindowWidth() / 2, GetDeviceHeight() / 2 - GetWindowHeight() / 2)
 	
+	coInit()
+
 	ma.readPath = GetReadPath()
 	ma.writePath = GetWritePath()
-	log("readpath=" + ma.readpath + ", writepath=" + ma.writepath)
+	//message("readpath=" + ma.readpath + ", writepath=" + ma.writepath)
 	
 	maLoadLevels()
 	
-	coInit()
-
-	ma.typNam = [ "X", "I", "J", "L", "O", "S", "T", "Z", "B" ]
+	ma.typNam = [ "X", "I", "J", "L", "O", "S", "T", "Z" ]
 	
 	ma.typCol.insert(makecolor(255, 255, 255))
 	ma.typCol.insert(makecolor(0, 255, 255))
@@ -165,16 +195,22 @@ function maInit()
 	ma.typCol.insert(makecolor(0, 255, 0))
 	ma.typCol.insert(makecolor(255, 0, 255))
 	ma.typCol.insert(makecolor(255, 0, 0))
-	ma.typCol.insert(makecolor(255, 255, 255))
 	
 	for i = 0 to ma.typNam.length
-		ma.typImg[i] = loadimage("gfx/" + ma.typNam[i] + ".png")		
+		ma.typImg[i] = loadimage("shps/" + ma.typNam[i] + ".png")		
 	next
 
 	ma.tickImg = loadimage("gfx/tick.png")
 	ma.playImg = loadimage("gfx/play.png")
 	ma.stopImg = loadimage("gfx/stop.png")
-	ma.smallButImg = loadimage("gfx/smallbut.png")
+	ma.backImg = loadimage("gfx/back.png")
+	ma.editImg = loadimage("gfx/edit.png")
+	ma.sButImg = loadimage("gfx/sbut.png")
+	ma.mbutImg = loadimage("gfx/mbut.png")
+	ma.lButImg = loadimage("gfx/lbut.png")
+	ma.xlButImg = loadimage("gfx/xlbut.png")
+	
+	// Play and editor.
 	
 	maCreateShape(shp, MA_SHP_X, 0, 0)
 	ma.sels.insert(shp)
@@ -192,23 +228,22 @@ function maInit()
 	ma.sels.insert(shp)
 	maCreateShape(shp, MA_SHP_Z, 0, 0)
 	ma.sels.insert(shp)
-	maCreateShape(shp, MA_SHP_B, 0, 0)
-	ma.sels.insert(shp)
 	
 	maGrid()
 
-	x = ma.s + 8
 	y = (ma.s * ma.oy) / 2
-	w = ma.s * 2
-	h = ma.s * 2
+	gap = 8
 	
 	ma.selY = y + ma.s
+	ma.butCol = makecolor(127, 127, 127)
+	ma.selButCol = co.blue[5]
 	
 	for i = 0 to ma.sels.length
 				
-		buCreateBut(but, ma.smallButImg, 0)
+		buCreateBut(but, ma.sButImg, 0)
+		if i = 0 then x = GetSpriteWidth(but.bg) / 2 + gap
 		but.fg = ma.sels[i].spr
-		buSetButScale(but, 0.9, 0.9)
+		buSetButScale(but, 0.7, 0.7)
 		
 		if i = MA_SHP_X or i = MA_SHP_O
 			buFitFg(but, 0, 32)
@@ -216,37 +251,105 @@ function maInit()
 			buFitFg(but, 0, 0)
 		endif
 		
-		coSetSpriteColor(but.bg, co.grey[5])
+		coSetSpriteColor(but.bg, ma.butCol)
 		buSetButPos(but, x, y)
 		ma.buts.insert(but)
 
-		inc x, ma.s * 1.9
+		inc x, GetSpriteWidth(but.bg) + gap
 		
 	next
 	
-	buCreateBut(ma.startBut, ma.smallButImg, ma.playImg)
-	coSetSpriteColor(ma.startBut.bg, co.grey[5])
-	buSetButPos(ma.startBut, co.w - GetSpriteWidth(ma.startBut.bg) / 2 - 16, y)
+	y = y - ma.s + gap * 2
+	sc = 0.3
+	buCreateBut(ma.levBut, ma.xlButImg, 0)
+	inc x, ma.s + gap * 5
+	buSetButScale(ma.levBut, sc, sc)
+	coSetSpriteColor(ma.levBut.bg, ma.butCol)
+	buSetButTx(ma.levBut, DIR_C, "Level: 1", 0, 40)
+	buSetButPos(ma.levBut, x, y)
+	inc y, GetSpriteHeight(ma.levBut.bg) + gap
+	buSetButVis(ma.levBut, false)
 
-	buCreateBut(ma.saveBut, ma.smallButImg, 0)
+	buCreateBut(ma.timeBut, ma.xlButImg, 0)
+	buSetButScale(ma.timeBut, sc, sc)
+	coSetSpriteColor(ma.timeBut.bg, ma.butCol)
+	buSetButTx(ma.timeBut, DIR_C, "Time: 30", 0, 40)
+	buSetButPos(ma.timeBut, x, y)
+	inc y, GetSpriteHeight(ma.levBut.bg) + gap
+	buSetButVis(ma.timeBut, false)
+
+	buCreateBut(ma.scoreBut, ma.xlButImg, 0)
+	buSetButScale(ma.scoreBut, sc, sc)
+	coSetSpriteColor(ma.scoreBut.bg, ma.butCol)
+	buSetButTx(ma.scoreBut, DIR_C, "Score: 0", 0, 40)
+	buSetButPos(ma.scoreBut, x, y)
+	inc y, GetSpriteHeight(ma.levBut.bg) + gap
+	buSetButVis(ma.scoreBut, false)
+
+	y = (ma.s * ma.oy) / 2
+	buCreateBut(ma.startBut, ma.sButImg, ma.playImg)
+	coSetSpriteColor(ma.startBut.bg, ma.butCol)
+	buSetButPos(ma.startBut, co.w - GetSpriteWidth(ma.startBut.bg) / 2 - gap * 4, y)
+
+	buCreateBut(ma.saveBut, ma.sButImg, 0)
 	coSetSpriteColor(ma.saveBut.bg, co.grey[7])
 	buSetButScale(ma.saveBut, 0.25, 0)
 	buSetButTx(ma.saveBut, DIR_C, "S", 0, 32)
 	buSetButPos(ma.saveBut, co.w - ma.s / 4, ma.s / 4)
+	buSetButVis(ma.saveBut, false)
 
-	//ma.selSpr = createsprite(ma.tickImg)
-	//SetSpriteScale(ma.selSpr, 0.5, 0.5)
-	//SetSpriteVisible(ma.selSpr, false)
+	// Main menu.
+		
+	buCreateBut(ma.backBut, 0, ma.backImg)
+	buSetButScale(ma.backBut, 0.5, 0.5)
+	buSetButPos(ma.backBut, GetSpriteWidth(ma.backBut.fg) / 2, GetSpriteHeight(ma.backBut.fg) / 2)
+
+	x = co.w / 2
+	y = co.h / 8
+	h = GetSpriteWidth(ma.startBut.bg)
+
+	ma.title = coCreateText("Balance", 0, 200)
+	SetTextAlignment(ma.title, 1)
+	SetTextPosition(ma.title, x, y)
+	inc y, GetTextTotalHeight(ma.title) + gap + h / 2
+
+	buCreateBut(ma.editBut, ma.sButImg, ma.editImg)
+	//buSetButTx(ma.editBut, DIR_C, "Edit", 0, 0)
+	coSetSpriteColor(ma.editBut.bg, ma.butCol)
+	buSetButPos(ma.editBut, x, y)
+	inc y, h + gap * 3
+	
+	w = 4
+	x = co.w / 2 - (w * h + (w - 1) * gap) / 2 + h / 2
+	xx = x
+
+	for i = 0 to ma.levs.length
+	
+		buCreateBut(but, ma.sButImg, 0)
+		buSetButTx(but, DIR_C, str(ma.levs[i].nbr), 0, 0)
+		coSetSpriteColor(but.bg, ma.butCol)
+		buSetButPos(but, x, y)
+		ma.levButs.insert(but)
+		
+		if w > 0
+			
+			inc x, h + gap
+			dec w
+			
+		else
+			 
+			inc y, h + gap
+			x = xx
+			w = 4
+			
+		endif
+		
+	next
 	
 	ma.selTyp = 0
 	ma.selShp.typ = MA_SHP_X
 	ma.phys = false
-	
-	maEdit(true)
-	maSelectShape()
 		
-	ma.state = MA_STATE_EDIT
-	
 endfunction
 
 // ---------------------------
@@ -257,6 +360,8 @@ function maLoadLevels()
 	local file as string
 	local s as string
 	local lev as Level
+	local levState as LevelState
+	local a as integer
 	
 	setfolder("levs")
 	
@@ -265,11 +370,35 @@ function maLoadLevels()
 	
 	while file <> ""
 		
-		log("file=" + file)
+		log("lev file=" + file)
+		a = asc(left(file, 1))
 		
-		s = maLoadLevel(file)
-		lev.fromjson(s)
-		ma.levs.insert(lev)
+		if a >= 48 and a <= 57 // If starts with a digit, it's a level.
+
+			s = maLoadFile(file)
+			lev.fromjson(s)
+			ma.levs.insertsorted(lev)
+			
+		endif
+		
+		file = getnextfile()
+		
+	endwhile
+	
+	setfolder("/media")
+
+	setfolder("states")
+	
+	file = GetFirstFile()
+	ma.levstates.length = -1
+	
+	while file <> ""
+		
+		log("state file=" + file)
+		
+		s = maLoadFile(file)
+		levstate.fromjson(s)
+		ma.levstates.insertsorted(levstate)
 		
 		file = getnextfile()
 		
@@ -280,9 +409,9 @@ function maLoadLevels()
 endfunction
 
 // ---------------------------
-// Load a level.
+// Load a level or state file.
 //
-function maLoadLevel(file as string)
+function maLoadFile(file as string)
 	
 	local fh as integer
 	local s as string
@@ -305,19 +434,7 @@ function maSaveLevel()
 	local i as integer
 	local fh as integer
 	local s as string
-	
-	maLoadLevels()
-
-	lev.nbr = 0
-	
-	for i = 0 to ma.levs.length
-		if ma.levs[i].nbr > lev.nbr
-			lev.nbr = ma.levs[i].nbr
-		endif
-	next
-	
-	inc lev.nbr
-	
+		
 	for i = 0 to ma.shps.length
 		
 		ss.typ = ma.shps[i].typ
@@ -328,10 +445,14 @@ function maSaveLevel()
 		lev.shps.insert(ss)
 		
 	next
+	
+	for i = 0 to lev.parts.length
+		lev.parts[i] = 0
+	next
 		
 	SetFolder("levs")
 	
-	name = str(lev.nbr) + ".txt"
+	name = "newlevel.txt"
 	fh = OpenToWrite(name)
 	s = lev.tojson()
 	s = ReplaceString(s, chr(10), " ", -1)
@@ -341,8 +462,38 @@ function maSaveLevel()
 	
 	setfolder("/media")
 	
-	ma.levs.insert(lev) // Add to the list.
+endfunction
 
+// ---------------------------
+// Save level state.
+//
+function maSaveLevelState()
+	
+	local lev as LevelState
+	local nbr as integer
+	local name as string
+	local i as integer
+	local fh as integer
+	local s as string
+				
+	SetFolder("states")
+	
+	lev.nbr = ma.lev
+	lev.time = ma.time
+	lev.score = ma.score
+	lev.dt = GetCurrentDate() + " " + GetCurrentTime()
+	
+	name = str(ma.levs[ma.lev].nbr) + ".txt"
+	
+	fh = OpenToWrite(name)
+	s = lev.tojson()
+	s = ReplaceString(s, chr(10), " ", -1)
+	s = ReplaceString(s, " ", "", -1)
+	WriteLine(fh, s)
+	CloseFile(fh)
+	
+	setfolder("/media")
+	
 endfunction
 
 // ---------------------------
@@ -377,8 +528,10 @@ function maGrid()
 	local spr as integer
 	local cell as Cell
 	
-	col1 = makecolor(47, 47, 47) // co.grey[8]
-	col2 = makecolor(31, 31, 31) // co.grey[9]
+	//col1 = makecolor(47, 47, 47) 
+	//col2 = makecolor(31, 31, 31) 
+	col1 = co.grey[8]
+	col2 = co.grey[9]
 	py = ma.oy * ma.s
 	
 	for y = 0 to ma.h - 1
@@ -416,35 +569,150 @@ function maGrid()
 endfunction
 
 // ---------------------------
-// Make edit sprites visible.
+// Show the menu.
 //
-function maEdit(vis as integer)
+function maMenu()
 	
 	local i as integer
 	
 	for i = 0 to ma.buts.length	
-		//SetSpriteVisible(ma.buts[i].spr, vis)
-		buSetButVis(ma.buts[i], vis)
+		buSetButVis(ma.buts[i], false)
+	next
+
+	buSetButVis(ma.startBut, false)
+	
+	for i = 0 to ma.cells.length
+		SetSpriteVisible(ma.cells[i].spr, false)
 	next
 	
-	//SetSpritePositionByOffset(ma.selSpr, GetSpriteXByOffset(ma.buts[ma.selTyp].spr), GetSpriteYByOffset(ma.buts[ma.selTyp].spr))
-	//SetSpriteVisible(ma.selSpr, true)
+	buSetButVis(ma.backBut, true)
+	buSetButVis(ma.editBut, true)
+
+	for i = 0 to ma.levbuts.length	
+		buSetButVis(ma.levbuts[i], true)
+	next
+	
+	SetTextVisible(ma.title, true)
+	
+	ma.state = MA_STATE_TITLE
 
 endfunction
 
 // ---------------------------
-// Create a level.
+// Make edit sprites visible.
 //
-function maCreateLevel(nbr as integer)
+function maEdit()
+	
+	local i as integer
+
+	for i = 0 to ma.buts.length	
+		buSetButVis(ma.buts[i], true)
+	next
+
+	buSetButVis(ma.levBut, false)
+	buSetButVis(ma.timeBut, false)
+	buSetButVis(ma.scoreBut, false)	
+	buSetButVis(ma.startBut, true)
+	buSetButVis(ma.saveBut, true)
+	
+	maSelectShape()
+
+	for i = 0 to ma.cells.length
+		SetSpriteVisible(ma.cells[i].spr, true)
+	next
+	
+	buSetButVis(ma.backBut, true)
+	buSetButVis(ma.editBut, false)
+
+	for i = 0 to ma.levbuts.length	
+		buSetButVis(ma.levbuts[i], false)
+	next
+
+	SetTextVisible(ma.title, false)
+
+	ma.state = MA_STATE_EDIT
+
+endfunction
+
+// ---------------------------
+// Play mode.
+//
+function maPlay()
+	
+	local i as integer
+	
+	for i = 0 to ma.buts.length	
+		buSetButVis(ma.buts[i], true)			
+	next
+	
+	buSetButVis(ma.levBut, true)
+	buSetButVis(ma.timeBut, true)
+	buSetButVis(ma.scoreBut, true)
+	buSetButVis(ma.startBut, true)
+	buSetButVis(ma.saveBut, false)
+
+	for i = 0 to ma.cells.length
+		SetSpriteVisible(ma.cells[i].spr, true)
+	next
+	
+	buSetButVis(ma.backBut, true)
+	buSetButVis(ma.editBut, false)
+	
+	for i = 0 to ma.levbuts.length	
+		buSetButVis(ma.levbuts[i], false)
+	next
+
+	SetTextVisible(ma.title, false)
 		
+	maDrawLevel()
+	maDrawScores()
+
+	ma.phys = false
+	ma.state = MA_STATE_PLAY
+
+endfunction
+
+// ---------------------------
+// Draw the score buttons.
+//
+function maDrawScores()
+	
+	buSetButTx(ma.levBut, DIR_C, "Level: " + str(ma.lev), -1, -1)
+	buSetButTx(ma.timeBut, DIR_C, "Time: " + str(ma.time), -1, -1)
+	buSetButTx(ma.scoreBut, DIR_C, "Score: " + str(ma.score), -1, -1)
+
+endfunction
+
+// ---------------------------
+// Draw the current level.
+//
+function maDrawLevel()
+			
 	local shp as Shape
+	local i as integer
+	local lev as integer
 	
 	maClean()
 	
-	if nbr = 1
-							
+	if ma.lev <= ma.levs.length
+		
+		lev = ma.lev - 1
+		
+		for i = 0 to ma.levs[lev].shps.length
+			
+			maCreateShape(shp, ma.levs[lev].shps[i].typ, ma.levs[lev].shps[i].x, ma.levs[lev].shps[i].y)
+			shp.rot = ma.levs[lev].shps[i].rot
+			maSetRotateShape(shp)
+			ma.shps.insert(shp)
+
+		next
+		
+		maResetShapes()
+		ma.time = ma.levs[lev].time // Get time from 1.txt, need to save it.
+		ma.score = 0
+		
 	endif
-	
+		
 endfunction
 
 // ---------------------------
@@ -462,15 +730,12 @@ function maCreateShape(shp ref as Shape, typ as integer, x as integer, y as inte
 	shp.rot = 0
 		
 	spr = CreateSprite(ma.typImg[typ])
-	SetSpriteScale(spr, 0.5, 0.5)
+	//SetSpriteScale(spr, 0.5, 0.5)
 	SetSpritePositionByOffset(spr, x * ma.s, y * ma.s)
 	coSetSpriteColor(spr, ma.typCol[typ])
 	SetSpriteDepth(spr, MA_DEPTH_SHAPE)
 	SetSpriteShape(spr, 3)
 		
-	//setSpritePhysicsGravityScale(spr, 10)
-	//SetSpritePhysicsOn(spr, 2)
-	
 	shp.spr = spr
 
 endfunction
@@ -505,9 +770,6 @@ function maCloneShape(shp ref as Shape, clone ref as Shape)
 	SetSpriteScale(clone.spr, 1, 1) // 0.5, 0.5)
 	SetSpriteDepth(clone.spr, MA_DEPTH_SHAPE)
 	SetSpriteShape(clone.spr, 3)
-	//SetSpritePhysicsGravityScale(clone.spr, 10)
-	//SetSpritePhysicsOff(clone.spr)
-
 	SetSpriteVisible(clone.spr, false)
 	
 endfunction
@@ -524,12 +786,44 @@ endfunction
 //
 function maUpdate()
 	
-	if ma.state = MA_STATE_EDIT
+	if ma.state = MA_STATE_TITLE
+		maUpdateTitle()
+	elseif ma.state = MA_STATE_EDIT
 		maUpdateEdit()
 	elseif ma.state = MA_STATE_PLAY
 		maUpdatePlay()
 	endif
 	
+endfunction
+
+// ---------------------------
+// Update title state.
+//
+function maUpdateTitle()
+	
+	local i as integer
+	
+	inUpdate()
+	
+	if in.ptrPressed
+		
+		if buButPressed(ma.backBut)
+			end
+		elseif buButPressed(ma.editBut)
+			maEdit()
+		else
+			for i = 0 to ma.levButs.length
+				if buButPressed(ma.levButs[i])
+					
+					ma.lev = ma.levs[i].nbr
+					maPlay()
+					
+				endif
+			next
+		endif
+		
+	endif
+
 endfunction
 
 // ---------------------------
@@ -539,8 +833,7 @@ function maUpdateEdit()
 	
 	inUpdate()
 	
-	if in.ptrPressed
-		
+	if in.ptrPressed	
 		if buButPressed(ma.startBut)
 			maStart()
 		elseif buButPressed(ma.saveBut)
@@ -548,9 +841,25 @@ function maUpdateEdit()
 		elseif maSelectShape() = -1
 			maDropShape()
 		endif
+	else
+		maHoverCell()
+	endif
 
-	elseif in.ptrDown
-	elseif in.ptrReleased
+endfunction
+
+// ---------------------------
+// Update play state.
+//
+function maUpdatePlay()
+
+	inUpdate()
+	
+	if in.ptrPressed	
+		if buButPressed(ma.startBut)
+			maStart()
+		elseif maSelectShape() = -1
+			maDropShape()
+		endif
 	else
 		maHoverCell()
 	endif
@@ -594,12 +903,7 @@ function maShowPhysics()
 		for i = 0 to ma.shps.length
 			
 			SetSpritePhysicsGravityScale(ma.shps[i].spr, 10)
-			
-			if ma.shps[i].typ = MA_SHP_B
-				SetSpritePhysicsOn(ma.shps[i].spr, 1)
-			else
-				SetSpritePhysicsOn(ma.shps[i].spr, 2)
-			endif
+			SetSpritePhysicsOn(ma.shps[i].spr, 2)
 
 		next
 		
@@ -653,10 +957,10 @@ function maSelectShape()
 	//SetSpriteVisible(ma.selSpr, true)
 	
 	for i = 0 to ma.buts.length
-		coSetSpriteColor(ma.buts[i].bg, co.grey[5])
+		coSetSpriteColor(ma.buts[i].bg, ma.butCol)
 	next
 	
-	coSetSpriteColor(ma.buts[ma.selTyp].bg, co.blue[5])
+	coSetSpriteColor(ma.buts[ma.selTyp].bg, ma.selButCol)
 		
 endfunction idx
 
@@ -665,7 +969,7 @@ endfunction idx
 //
 function maRotateShape(shp ref as Shape)
 	
-	if shp.typ = MA_SHP_I or shp.typ = MA_SHP_J or shp.typ = MA_SHP_S or shp.typ = MA_SHP_Z
+	if shp.typ = MA_SHP_I or shp.typ = MA_SHP_S or shp.typ = MA_SHP_Z
 		
 		if shp.rot = 0
 			shp.rot = 1	
@@ -831,13 +1135,6 @@ function maHoverCell()
 		
 	endif
 			
-endfunction
-
-// ---------------------------
-// Update play state.
-//
-function maUpdatePlay()
-
 endfunction
 
 // ---------------------------
