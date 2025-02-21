@@ -12,6 +12,9 @@
 #constant MA_STATE_TITLE = 1
 #constant MA_STATE_EDIT = 2
 #constant MA_STATE_PLAY = 3
+#constant MA_STATE_WAIT = 4 // Want for the timer to determine if we have a successful physics!
+#constant MA_STATE_FAIL = 5
+#constant MA_STATE_SUCC = 6
 
 #constant MA_DEPTH_SHAPE = 1800
 #constant MA_DEPTH_SEL = 1900
@@ -32,7 +35,6 @@ type Cell
 	y as integer
 	rect as Rect
 	spr as integer
-	//tx as integer
 	col as integer
 	
 endtype
@@ -46,6 +48,7 @@ type Shape
 	spr as integer
 	phys as integer // Determines whether physics is on.
 	rect as Rect
+	sol as integer
 	
 endtype
 
@@ -55,6 +58,7 @@ type StoredShape
 	x as integer
 	y as integer
 	rot as integer
+	sol as integer // solution shape. Don't show, use to check.
 	
 endtype
 
@@ -62,8 +66,17 @@ type Level
 	
 	nbr as integer
 	time as integer
+	shps as Shape[] // String shape.
+	//parts as integer[MA_SHP_Z] // Space for the number of each shape avail to unbuild the level.
+	
+endtype
+
+type StoredLevel
+	
+	nbr as integer
+	time as integer
 	shps as StoredShape[] // String shape.
-	parts as integer[MA_SHP_Z] // Space for the number of each shape avail to unbuild the level.
+	//parts as integer[MA_SHP_Z] // Space for the number of each shape avail to unbuild the level.
 	
 endtype
 
@@ -89,9 +102,10 @@ type Main
 	base as integer
 	cells as Cell[]
 	shps as Shape[]
-	typNam as string[8]
+	//parts as integer[MA_SHP_Z]
+	typNam as string[MA_SHP_Z]
 	typCol as integer[]
-	typImg as integer[8]
+	typImg as integer[MA_SHP_Z]
 	tickImg as integer
 	playImg as integer
 	stopImg as integer
@@ -126,6 +140,7 @@ type Main
 	time as integer
 	score as integer
 	shape as integer
+	waittime as integer
 	
 endtype
 
@@ -133,8 +148,7 @@ global ma as Main
 
 maInit()
 maTitle()
-//maPlay()
-SetPhysicsDebugOn()
+//SetPhysicsDebugOn()
 
 do
 	
@@ -187,7 +201,8 @@ function maInit()
 	
 	maLoadLevels()
 	
-	ma.typNam = [ "X", "I", "J", "L", "O", "S", "T", "Z" ]
+	//ma.typNam = [ "X", "I", "J", "L", "O", "S", "T", "Z" ]
+	ma.typNam = [ "X", "A", "A", "A", "A", "A" ]
 	
 	ma.typCol.insert(makecolor(255, 255, 255))
 	ma.typCol.insert(makecolor(0, 255, 255))
@@ -195,8 +210,8 @@ function maInit()
 	ma.typCol.insert(makecolor(255, 127, 0))
 	ma.typCol.insert(makecolor(255, 255, 0))
 	ma.typCol.insert(makecolor(0, 255, 0))
-	ma.typCol.insert(makecolor(255, 0, 255))
-	ma.typCol.insert(makecolor(255, 0, 0))
+	//ma.typCol.insert(makecolor(255, 0, 255))
+	//ma.typCol.insert(makecolor(255, 0, 0))
 	
 	for i = 0 to ma.typNam.length
 		ma.typImg[i] = loadimage("shps/" + ma.typNam[i] + ".png")		
@@ -226,10 +241,10 @@ function maInit()
 	ma.sels.insert(shp)
 	maCreateShape(shp, MA_SHP_S, 0, 0)
 	ma.sels.insert(shp)
-	maCreateShape(shp, MA_SHP_T, 0, 0)
-	ma.sels.insert(shp)
-	maCreateShape(shp, MA_SHP_Z, 0, 0)
-	ma.sels.insert(shp)
+	//maCreateShape(shp, MA_SHP_T, 0, 0)
+	//ma.sels.insert(shp)
+	//maCreateShape(shp, MA_SHP_Z, 0, 0)
+	//ma.sels.insert(shp)
 	
 	maGrid()
 
@@ -261,11 +276,19 @@ function maInit()
 		
 	next
 	
-	y = y - ma.s + gap * 2
+	x = 	co.w - gap * 11
+	y = (ma.s * ma.oy) / 2
+	buCreateBut(ma.startBut, ma.sButImg, ma.playImg)
+	coSetSpriteColor(ma.startBut.bg, ma.butCol)
+	buSetButPos(ma.startBut, x, y)
+
+	//y = y - ma.s + gap * 2
+	
 	sc = 0.3
 	buCreateBut(ma.levBut, ma.xlButImg, 0)
-	inc x, ma.s + gap * 5
 	buSetButScale(ma.levBut, sc, sc)
+	x = x - GetSpriteWidth(ma.startBut.bg) / 2 - GetSpriteWidth(ma.levBut.bg) / 2 - gap * 3
+	y = y - GetSpriteHeight(ma.startBut.bg) / 2 + GetSpriteHeight(ma.levBut.bg) / 2
 	coSetSpriteColor(ma.levBut.bg, ma.butCol)
 	buSetButTx(ma.levBut, DIR_C, "Level: 1", 0, 40)
 	buSetButPos(ma.levBut, x, y)
@@ -287,11 +310,6 @@ function maInit()
 	buSetButPos(ma.scoreBut, x, y)
 	inc y, GetSpriteHeight(ma.levBut.bg) + gap
 	buSetButVis(ma.scoreBut, false)
-
-	y = (ma.s * ma.oy) / 2
-	buCreateBut(ma.startBut, ma.sButImg, ma.playImg)
-	coSetSpriteColor(ma.startBut.bg, ma.butCol)
-	buSetButPos(ma.startBut, co.w - GetSpriteWidth(ma.startBut.bg) / 2 - gap * 4, y)
 
 	buCreateBut(ma.saveBut, ma.sButImg, 0)
 	coSetSpriteColor(ma.saveBut.bg, co.grey[7])
@@ -361,9 +379,12 @@ function maLoadLevels()
 	
 	local file as string
 	local s as string
+	local sl as StoredLevel
 	local lev as Level
 	local levState as LevelState
 	local a as integer
+	local shp as Shape
+	local i as integer
 	
 	setfolder("levs")
 	
@@ -378,7 +399,24 @@ function maLoadLevels()
 		if a >= 48 and a <= 57 // If starts with a digit, it's a level.
 
 			s = maLoadFile(file)
-			lev.fromjson(s)
+			sl.fromjson(s)
+			
+			lev.nbr = sl.nbr
+			lev.time = sl.time
+			//lev.parts = sl.parts
+			
+			for i = 0 to sl.shps.length
+				
+				shp.typ = sl.shps[i].typ
+				shp.x = sl.shps[i].x
+				shp.y = sl.shps[i].y
+				shp.rot = sl.shps[i].rot
+				shp.sol = sl.shps[i].sol
+				shp.phys = false
+				lev.shps.insert(shp)
+				
+			next
+			
 			ma.levs.insertsorted(lev)
 			
 		endif
@@ -429,7 +467,7 @@ endfunction s
 //
 function maSaveLevel()
 	
-	local lev as Level
+	local sl as StoredLevel
 	local ss as StoredShape
 	local nbr as integer
 	local name as string
@@ -443,20 +481,17 @@ function maSaveLevel()
 		ss.x = ma.shps[i].x
 		ss.y = ma.shps[i].y
 		ss.rot = ma.shps[i].rot
+		ss.sol = 0
 		
-		lev.shps.insert(ss)
+		sl.shps.insert(ss)
 		
 	next
-	
-	for i = 0 to lev.parts.length
-		lev.parts[i] = 0
-	next
-		
+			
 	SetFolder("levs")
 	
 	name = "newlevel.txt"
 	fh = OpenToWrite(name)
-	s = lev.tojson()
+	s = sl.tojson()
 	s = ReplaceString(s, chr(10), " ", -1)
 	s = ReplaceString(s, " ", "", -1)
 	WriteLine(fh, s)
@@ -613,10 +648,6 @@ function maEdit()
 	
 	local i as integer
 
-	for i = 0 to ma.buts.length	
-		buSetButVis(ma.buts[i], true)
-	next
-
 	buSetButVis(ma.levBut, false)
 	buSetButVis(ma.timeBut, false)
 	buSetButVis(ma.scoreBut, false)	
@@ -637,6 +668,8 @@ function maEdit()
 	next
 
 	SetTextVisible(ma.title, false)
+	
+	maDrawButtons()
 
 	ma.state = MA_STATE_EDIT
 
@@ -648,11 +681,7 @@ endfunction
 function maPlay()
 	
 	local i as integer
-	
-	for i = 0 to ma.buts.length	
-		buSetButVis(ma.buts[i], true)			
-	next
-	
+			
 	buSetButVis(ma.levBut, true)
 	buSetButVis(ma.timeBut, true)
 	buSetButVis(ma.scoreBut, true)
@@ -674,10 +703,63 @@ function maPlay()
 		
 	maDrawLevel()
 	maDrawScores()
+	maDrawButtons()
 
 	ma.phys = false
 	ma.state = MA_STATE_PLAY
 
+endfunction
+
+// ---------------------------
+// Draw the buttons.
+//
+function maDrawButtons()
+
+	local i as integer
+	local counts as integer[MA_SHP_Z]
+	
+	for i = 0 to ma.shps.length
+		if ma.shps[i].sol
+			inc counts[ma.shps[i].typ]
+		endif
+	next
+	
+	for i = 0 to ma.buts.length
+		
+		if ma.state = MA_STATE_EDIT
+			
+			buSetButVis(ma.buts[i], true)
+		
+		elseif i > 0
+			
+			if counts[i]
+				
+				buSetButTx(ma.buts[i], DIR_S, str(counts[i]), 0, 32)	
+				buSetButAct(ma.buts[i], true)
+				//coSetSpriteAlpha(ma.buts[i].bg, 255)
+				//coSetSpriteAlpha(ma.buts[i].fg, 255)
+
+			else
+				 
+				buSetButTx(ma.buts[i], DIR_S, "", -1, -1)
+				buSetButAct(ma.buts[i], false)
+				//coSetSpriteAlpha(ma.buts[i].bg, 63)	
+				//coSetSpriteAlpha(ma.buts[i].fg, 63)	
+				
+			endif
+
+			buSetButVis(ma.buts[i], true)	
+			
+		else
+
+			buSetButVis(ma.buts[i], false)	
+			
+		endif
+		
+		buUpdateButPos(ma.buts[i])
+				
+	next
+	
 endfunction
 
 // ---------------------------
@@ -705,16 +787,29 @@ function maDrawLevel()
 	if ma.lev <= ma.levs.length + 1
 		
 		lev = ma.lev - 1
-		
+				
 		for i = 0 to ma.levs[lev].shps.length
 			
-			maCreateShape(shp, ma.levs[lev].shps[i].typ, ma.levs[lev].shps[i].x, ma.levs[lev].shps[i].y)
+			if not ma.levs[lev].shps[i].sol	
+				
+				maCreateShape(shp, ma.levs[lev].shps[i].typ, ma.levs[lev].shps[i].x, ma.levs[lev].shps[i].y)
+				
+			else
+				
+				shp.typ = ma.levs[lev].shps[i].typ
+				shp.x = ma.levs[lev].shps[i].x
+				shp.y = ma.levs[lev].shps[i].y
+				shp.spr = 0
+				
+			endif
+			
 			shp.rot = ma.levs[lev].shps[i].rot
-			maSetRotateShape(shp)
+			shp.sol = ma.levs[lev].shps[i].sol
+			if shp.spr then maSetRotateShape(shp)
 			ma.shps.insert(shp)
-
+				
 		next
-		
+				
 		maResetShapes()
 		ma.time = ma.levs[lev].time // Get time from 1.txt, need to save it.
 		ma.score = 0
@@ -800,6 +895,8 @@ function maUpdate()
 		maUpdateEdit()
 	elseif ma.state = MA_STATE_PLAY
 		maUpdatePlay()
+	elseif ma.state = MA_STATE_WAIT
+		maUpdateWait()
 	endif
 	
 endfunction
@@ -879,6 +976,94 @@ function maUpdatePlay()
 endfunction
 
 // ---------------------------
+// Update wait state.
+//
+function maUpdateWait()
+
+	local t as integer
+	local i as integer
+	local lev as integer
+	local rect as Rect
+	local x as float
+	local y as float
+	local ox as float
+	local oy as float
+	local spr as integer
+	
+	inUpdate()
+	
+	if in.ptrPressed	
+		if buButPressed(ma.backBut)
+			maTitle()
+		endif
+	endif
+
+	//for i = 0 to ma.shps.length
+	//next
+		
+	lev = ma.lev - 1
+	
+	for i = 0 to ma.shps.length
+		
+		if ma.shps[i].spr
+			
+			x = GetSpriteXByOffset(ma.shps[i].spr)
+			y = GetSpriteYByOffset(ma.shps[i].spr)
+			ox = GetSpriteOffsetX(ma.shps[i].spr)
+			oy = GetSpriteOffsetY(ma.shps[i].spr)
+			
+			if mod(ma.shps[i].rot, 2) <> 0
+				
+				t = ox
+				ox = oy
+				oy = t
+				
+			endif
+			
+			rect.x = (ma.ox + ma.shps[i].x) * ma.s + ox - ma.s / 2
+			rect.y = (ma.oy + ma.shps[i].y) * ma.s + oy - ma.s / 2
+			rect.w = ma.s
+			rect.h = ma.s
+/*
+			spr = createsprite(co.pixImg)
+			SetSpriteScale(spr, 10, 10)
+			cosetspritecolor(spr, co.red[5])
+			SetSpritePositionByOffset(spr, x, y)
+			
+			spr = createsprite(co.pixImg)
+			SetSpriteScale(spr, 10, 10)
+			cosetspritecolor(spr, co.blue[5])
+			SetSpritePositionByOffset(spr, rect.x, rect.y)
+
+			spr = createsprite(co.pixImg)
+			SetSpriteScale(spr, 10, 10)
+			cosetspritecolor(spr, co.green[5])
+			SetSpritePositionByOffset(spr, rect.x + rect.w, rect.y + rect.h)			
+			
+			log("x=" + str(x) + ", y=" + str(y) + ", rx=" + str(rect.x) + ", ry=" + str(rect.y) + ", rw=" + str(rect.w) + ", rh=" + str(rect.h))
+*/		
+			if not coPointWithinRect2(x, y, rect)
+				
+				//log("Movemeent on shape " + str(i))	
+				ma.phys = false
+				maShowPhysics() // Stop physics.
+				ma.state = MA_STATE_FAIL
+							
+			endif
+			
+		endif
+		
+	next
+	
+	t = GetMilliseconds()
+	
+	if t > ma.waitTime
+		
+	endif
+
+endfunction
+
+// ---------------------------
 // Check if start is prssed.
 //
 function maStart()
@@ -895,6 +1080,14 @@ function maStart()
 		
 		ma.phys = true
 		buSetButFg(ma.startBut, ma.stopImg)
+		
+		if ma.state = MA_STATE_PLAY
+			
+			buSetButVis(ma.startBut, false) // Need to wait.
+			ma.state = MA_STATE_WAIT
+			
+		endif
+		
 		buUpdateButPos(ma.startBut)
 		maShowPhysics()
 
@@ -914,16 +1107,21 @@ function maShowPhysics()
 				
 		for i = 0 to ma.shps.length
 			
-			//SetSpritePhysicsVelocity(ma.shps[i].spr, 0, 0)
-			//SetSpritePhysicsGravityScale(ma.shps[i].spr, 10)
-			SetSpritePhysicsOn(ma.shps[i].spr, 2)
+			if ma.shps[i].spr
+				
+				SetSpritePhysicsGravityScale(ma.shps[i].spr, 10)
+				SetSpritePhysicsOn(ma.shps[i].spr, 2)
+				
+			endif
 
 		next
 		
 	else
 				
 		for i = 0 to ma.shps.length
-			SetSpritePhysicsOff(ma.shps[i].spr)
+			if ma.shps[i].spr
+				SetSpritePhysicsOff(ma.shps[i].spr)
+			endif
 		next
 			
 	endif
@@ -938,12 +1136,22 @@ function maSelectShape()
 	local i as integer
 	local shp as Shape
 	local idx as integer
+	local butok as integer
+	local count as integer
 	
 	idx = -1
 	
 	for i = 0 to ma.buts.length
+	
+		butok = true
 		
-		if buButPressed(ma.buts[i])
+		if ma.state = MA_STATE_PLAY	
+			if ma.buts[i].txs.length = -1
+				butok = false
+			endif
+		endif 
+			
+		if butok and buButPressed(ma.buts[i])
 			
 			if i = ma.selTyp
 				if i > 0				
@@ -965,10 +1173,7 @@ function maSelectShape()
 		
 	next
 		
-	for i = 0 to ma.buts.length
-		coSetSpriteColor(ma.buts[i].bg, ma.butCol)
-	next
-	
+	maDrawButtons()	
 	coSetSpriteColor(ma.buts[ma.selTyp].bg, ma.selButCol)
 		
 endfunction idx
@@ -1007,14 +1212,16 @@ endfunction
 //
 function maSetRotateShape(shp ref as Shape)
 	
-	if shp.rot = 0		
-		SetSpriteAngle(shp.spr, 0)
-	elseif shp.rot = 1		
-		SetSpriteAngle(shp.spr, 90)		
-	elseif shp.rot = 2		
-		SetSpriteAngle(shp.spr, 180)		
-	elseif shp.rot = 3	
-		SetSpriteAngle(shp.spr, 270)		
+	if shp.spr	
+		if shp.rot = 0		
+			SetSpriteAngle(shp.spr, 0)
+		elseif shp.rot = 1		
+			SetSpriteAngle(shp.spr, 90)		
+		elseif shp.rot = 2		
+			SetSpriteAngle(shp.spr, 180)		
+		elseif shp.rot = 3	
+			SetSpriteAngle(shp.spr, 270)		
+		endif
 	endif
 						
 endfunction
@@ -1025,24 +1232,65 @@ endfunction
 function maDropShape()
 	
 	local i as integer
+	local shpdel as integer
+	local spr as integer
 	
 	if ma.selTyp // Not deleting.
+				
+		if ma.state = MA_STATE_EDIT
+			ma.shps.insert(ma.selShp)
+		else
+			for i = 0 to ma.shps.length
+				if ma.shps[i].typ = ma.selTyp and ma.shps[i].sol
+					
+					ma.shps[i].spr = ma.selShp.spr
+					ma.shps[i].sol = false
+					
+				endif
+			next
+			
+		endif
 		
-		ma.shps.insert(ma.selShp)
+		//dec ma.parts[ma.selTyp]
 		
 		// Clear for next.
-		//ma.selShp.typ = MA_SHP_X
+		ma.selShp.typ = MA_SHP_X
 		ma.selShp.spr = 0
-		maCloneShape(ma.sels[ma.selTyp], ma.selShp)
+		ma.selTyp = MA_SHP_X
+		maSelectShape()
 				
 	else // Delete?
+
+		spr = GetSpriteHit(in.ptrX, in.ptrY)
 		
 		for i = 0 to ma.shps.length
-			if coGetSpriteHitTest4(ma.shps[i].spr, in.ptrX, in.ptrY, 0)
+			//if coGetSpriteHitTest4(ma.shps[i].spr, in.ptrX, in.ptrY, 0)
+			
+			if spr = ma.shps[i].spr
 				
-				maDeleteShape(ma.shps[i])
-				ma.shps.remove(i)
-				exit
+				if ma.state = MA_STATE_EDIT or (ma.state = MA_STATE_PLAY and ma.shps[i].sol)
+					shpdel = true
+				else 
+					shpdel = false
+				endif
+				
+				if shpdel
+					
+					maDeleteShape(ma.shps[i])
+					
+					if ma.state = MA_STATE_EDIT
+						ma.shps.remove(i)
+					else
+						ma.shps[i].sol = true
+					endif
+					
+					//inc ma.parts[ma.selTyp]
+
+					maSelectShape()
+
+					exit
+					
+				endif
 				
 			endif
 		next
@@ -1098,17 +1346,21 @@ function maPosShape(shp ref as Shape)
 	local w as float
 	local h as float
 
-	if shp.rot = 1 or shp.rot = 3	
+	if shp.spr
 		
-		h = getspritewidth(shp.spr)
-		w = GetSpriteHeight(shp.spr)
-		SetSpritePositionByOffset(shp.spr, (ma.ox + shp.x) * ma.s + w / 2, (ma.oy + shp.y) * ma.s + h / 2)	
-		
-	else	
-				
-		w = getspritewidth(shp.spr)
-		h = GetSpriteHeight(shp.spr)
-		SetSpritePositionByOffset(shp.spr, (ma.ox + shp.x) * ma.s + w / 2, (ma.oy + shp.y) * ma.s + h / 2)	
+		if shp.rot = 1 or shp.rot = 3	
+			
+			h = getspritewidth(shp.spr)
+			w = GetSpriteHeight(shp.spr)
+			SetSpritePositionByOffset(shp.spr, (ma.ox + shp.x) * ma.s + w / 2, (ma.oy + shp.y) * ma.s + h / 2)	
+			
+		else	
+					
+			w = getspritewidth(shp.spr)
+			h = GetSpriteHeight(shp.spr)
+			SetSpritePositionByOffset(shp.spr, (ma.ox + shp.x) * ma.s + w / 2, (ma.oy + shp.y) * ma.s + h / 2)	
+			
+		endif
 		
 	endif
 	

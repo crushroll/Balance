@@ -2137,6 +2137,15 @@ function coSetSpriteColorAlpha(spr as integer, col as integer, alpha as integer)
 endfunction
 
 //-----------------------------------------------------
+// Set the color of the passed sprite using bit pattern color.
+//
+function coSetSpriteAlpha(spr as integer, alpha as integer)
+	
+	SetSpriteColor(spr, getSpriteColorRed(spr), getSpriteColorGreen(spr), getSpriteColorBlue(spr), alpha)
+
+endfunction
+
+//-----------------------------------------------------
 // Get the color of the passed sprite returning a bit pattern color.
 //
 function coGetSpriteColor(spr as integer)
@@ -2171,6 +2180,15 @@ endfunction
 function coSetTextColorAlpha(spr as integer, col as integer, alpha as integer)
 	
 	SetTextColor(spr, getcolorred(col), getcolorgreen(col), getcolorblue(col), alpha)
+
+endfunction
+
+//-----------------------------------------------------
+// Set the color of the passed text using bit pattern color.
+//
+function coSetTextAlpha(text as integer, alpha as integer)
+	
+	SetTextColor(text, getTextColorRed(text), getTextColorGreen(text), getTextColorBlue(text), alpha)
 
 endfunction
 

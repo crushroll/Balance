@@ -24,6 +24,9 @@ type Button
 	ts as integer
 	bs as float
 	fs as float
+	act as integer
+	actal as integer // active alpha
+	nonactal as integer // non active alpha
 	
 	bg as integer
 	fg as integer
@@ -42,6 +45,9 @@ function buCreateBut(but ref as Button, bgImg as integer, fgImg as integer)
 	but.fg = 0
 	but.txs.length = -1
 	but.text = ""
+	but.act = true
+	but.actal = 255
+	but.nonactal = 63
 	
 	buClearBut(but)
 	buSetButBg(but, bgImg)
@@ -336,7 +342,7 @@ function buSetButTx(but ref as Button, dir as integer, text as string, font as i
 			buCalcTextSize(but, idx)
 		endif
 						
-	else
+	elseif idx > -1
 		
 		DeleteText(but.txs[idx].tx)
 		but.txs.remove(idx)
@@ -416,19 +422,44 @@ endfunction
 function buSetButVis(but ref as Button, vis as integer)
 	
 	local i as integer
+	local a as integer
+	
+	if but.act
+		a = but.actal
+	else
+		a = but.nonactal
+	endif
 	
 	if but.bg
+		
+		coSetSpriteAlpha(but.bg, a)
 		SetSpriteVisible(but.bg, vis)
+		
 	endif
 
 	if but.fg
+		
+		coSetSpriteAlpha(but.fg, a)
 		SetSpriteVisible(but.fg, vis)
+		
 	endif
 
 	for i = 0 to but.txs.length
+		
+		coSetTextAlpha(but.txs[i].tx, a)
 		SetTextVisible(but.txs[i].tx, vis)
+		
 	next
 	
+endfunction
+
+// -------------------------------------------------------
+// Set the button active.
+//
+function buSetButAct(but ref as Button, act as integer)
+
+	but.act = act
+						
 endfunction
 
 // -------------------------------------------------------
