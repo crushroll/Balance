@@ -16,6 +16,8 @@
 #constant MA_STATE_FAIL = 5
 #constant MA_STATE_SUCC = 6
 
+#constant MA_DEPTH_DTX = 1600
+#constant MA_DEPTH_DIALOG = 1700
 #constant MA_DEPTH_SHAPE = 1800
 #constant MA_DEPTH_SEL = 1900
 #constant MA_DEPTH_EDIT = 2000
@@ -111,6 +113,8 @@ type Main
 	stopImg as integer
 	backImg as integer
 	editImg as integer
+	nextImg as integer
+	retryImg as integer
 	buts as Button[]
 	sels as Shape[] // The selector shapes.
 	selTyp as integer // The selected typ.
@@ -140,7 +144,12 @@ type Main
 	time as integer
 	score as integer
 	shape as integer
-	waittime as integer
+	starttime as integer
+	failtime as integer
+	dialogTxs as string[]
+	nextBut as Button	
+	dialogTx as integer
+	dialog as integer
 	
 endtype
 
@@ -202,17 +211,23 @@ function maInit()
 	maLoadLevels()
 	
 	//ma.typNam = [ "X", "I", "J", "L", "O", "S", "T", "Z" ]
-	ma.typNam = [ "X", "A", "A", "A", "A", "A" ]
+	ma.typNam = [ "X", "A", "A", "A", "A" ]
 	
-	ma.typCol.insert(makecolor(255, 255, 255))
-	ma.typCol.insert(makecolor(0, 255, 255))
-	ma.typCol.insert(makecolor(0, 0, 255))
-	ma.typCol.insert(makecolor(255, 127, 0))
-	ma.typCol.insert(makecolor(255, 255, 0))
-	ma.typCol.insert(makecolor(0, 255, 0))
+	//ma.typCol.insert(makecolor(255, 255, 255))
+	//ma.typCol.insert(makecolor(0, 255, 255))
+	//ma.typCol.insert(makecolor(0, 0, 255))
+	//ma.typCol.insert(makecolor(255, 127, 0))
+	//ma.typCol.insert(makecolor(255, 255, 0))
+	//ma.typCol.insert(makecolor(0, 255, 0))
 	//ma.typCol.insert(makecolor(255, 0, 255))
 	//ma.typCol.insert(makecolor(255, 0, 0))
-	
+
+	ma.typCol.insert(makecolor(255, 255, 255))
+	ma.typCol.insert(makecolor(255, 0, 0))
+	ma.typCol.insert(makecolor(0, 255, 0))
+	ma.typCol.insert(makecolor(0, 0, 255))
+	ma.typCol.insert(makecolor(255, 255, 0))
+
 	for i = 0 to ma.typNam.length
 		ma.typImg[i] = loadimage("shps/" + ma.typNam[i] + ".png")		
 	next
@@ -222,6 +237,9 @@ function maInit()
 	ma.stopImg = loadimage("gfx/stop.png")
 	ma.backImg = loadimage("gfx/back.png")
 	ma.editImg = loadimage("gfx/edit.png")
+	ma.nextImg = loadimage("gfx/next.png")
+	ma.retryImg = loadimage("gfx/retry.png")
+	
 	ma.sButImg = loadimage("gfx/sbut.png")
 	ma.mbutImg = loadimage("gfx/mbut.png")
 	ma.lButImg = loadimage("gfx/lbut.png")
@@ -239,13 +257,19 @@ function maInit()
 	ma.sels.insert(shp)
 	maCreateShape(shp, MA_SHP_O, 0, 0)
 	ma.sels.insert(shp)
-	maCreateShape(shp, MA_SHP_S, 0, 0)
-	ma.sels.insert(shp)
+	//maCreateShape(shp, MA_SHP_S, 0, 0)
+	//ma.sels.insert(shp)
 	//maCreateShape(shp, MA_SHP_T, 0, 0)
 	//ma.sels.insert(shp)
 	//maCreateShape(shp, MA_SHP_Z, 0, 0)
 	//ma.sels.insert(shp)
 	
+	ma.base = createsprite(co.pixImg)
+	SetSpriteScale(ma.base, ma.s * ma.pw, ma.s)
+	SetSpritePosition(ma.base, 0, co.h - ma.s)
+	SetSpriteVisible(ma.base, false)
+	
+	//maTestWelds()		
 	maGrid()
 
 	y = (ma.s * ma.oy) / 2
@@ -258,15 +282,15 @@ function maInit()
 	for i = 0 to ma.sels.length
 				
 		buCreateBut(but, ma.sButImg, 0)
-		if i = 0 then x = GetSpriteWidth(but.bg) / 2 + gap
+		if i = 0 then x = GetSpriteWidth(but.bg) / 2 + gap * 22
 		but.fg = ma.sels[i].spr
 		buSetButScale(but, 0.7, 0.7)
 		
-		if i = MA_SHP_X or i = MA_SHP_O
-			buFitFg(but, 0, 32)
-		else
+		//if i = MA_SHP_X or i = MA_SHP_O
+		//	buFitFg(but, 0, 32)
+		//else
 			buFitFg(but, 0, 0)
-		endif
+		//endif
 		
 		coSetSpriteColor(but.bg, ma.butCol)
 		buSetButPos(but, x, y)
@@ -276,7 +300,7 @@ function maInit()
 		
 	next
 	
-	x = 	co.w - gap * 11
+	x = co.w - gap * 11
 	y = (ma.s * ma.oy) / 2
 	buCreateBut(ma.startBut, ma.sButImg, ma.playImg)
 	coSetSpriteColor(ma.startBut.bg, ma.butCol)
@@ -298,7 +322,7 @@ function maInit()
 	buCreateBut(ma.timeBut, ma.xlButImg, 0)
 	buSetButScale(ma.timeBut, sc, sc)
 	coSetSpriteColor(ma.timeBut.bg, ma.butCol)
-	buSetButTx(ma.timeBut, DIR_C, "Time: 30", 0, 40)
+	buSetButTx(ma.timeBut, DIR_C, "Time: 0", 0, 40)
 	buSetButPos(ma.timeBut, x, y)
 	inc y, GetSpriteHeight(ma.levBut.bg) + gap
 	buSetButVis(ma.timeBut, false)
@@ -311,19 +335,21 @@ function maInit()
 	inc y, GetSpriteHeight(ma.levBut.bg) + gap
 	buSetButVis(ma.scoreBut, false)
 
+	buCreateBut(ma.backBut, 0, ma.backImg)
+	//buSetButScale(ma.backBut, 0.5, 0.5)
+	buSetButPos(ma.backBut, GetSpriteWidth(ma.backBut.fg) / 2, GetSpriteHeight(ma.backBut.fg) / 2)
+
 	buCreateBut(ma.saveBut, ma.sButImg, 0)
 	coSetSpriteColor(ma.saveBut.bg, co.grey[7])
-	buSetButScale(ma.saveBut, 0.25, 0)
-	buSetButTx(ma.saveBut, DIR_C, "S", 0, 32)
-	buSetButPos(ma.saveBut, co.w - ma.s / 4, ma.s / 4)
+	//buSetButScale(ma.saveBut, 0.25, 0)
+	buSetButScale(ma.saveBut, 0.5, 0)
+	buSetButTx(ma.saveBut, DIR_C, "Save", 0, 32)
+	//buSetButPos(ma.saveBut, co.w - ma.s / 4, ma.s / 4)
+	buSetButPos(ma.saveBut, GetSpriteWidth(ma.saveBut.bg) / 2 + gap * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + gap * 5)
 	buSetButVis(ma.saveBut, false)
 
 	// Main menu.
 		
-	buCreateBut(ma.backBut, 0, ma.backImg)
-	buSetButScale(ma.backBut, 0.5, 0.5)
-	buSetButPos(ma.backBut, GetSpriteWidth(ma.backBut.fg) / 2, GetSpriteHeight(ma.backBut.fg) / 2)
-
 	x = co.w / 2
 	y = co.h / 8
 	h = GetSpriteWidth(ma.startBut.bg)
@@ -370,6 +396,54 @@ function maInit()
 	ma.selShp.typ = MA_SHP_X
 	ma.phys = false
 		
+endfunction
+
+function maTestWelds()
+
+	local sprs as integer[]
+	local spr as integer
+	local x as float
+	local y as float
+	local i as integer
+	
+	y = 300
+	
+	for i = 0 to 3
+		
+		spr = createsprite(co.pixImg)
+		SetSpriteScale(spr, ma.s, ma.s)
+		SetSpritePosition(spr, 100, y)
+		SetSpritePhysicsGravityScale(spr, 10)
+		SetSpritePhysicsOn(spr, 2)
+		
+		if i > 1
+			CreateWeldJoint(sprs[i - 1], spr, getspritex(spr), getspritey(spr) + GetSpriteHeight(spr) / 2, 0)
+		endif
+		
+		sprs.insert(spr)
+		inc y, GetSpriteHeight(spr)
+				
+	next
+	
+	x = 100
+	
+	for i = 0 to 3
+		
+		spr = createsprite(co.pixImg)
+		SetSpriteScale(spr, ma.s, ma.s)
+		SetSpritePosition(spr, x, 100)
+		SetSpritePhysicsGravityScale(spr, 10)
+		SetSpritePhysicsOn(spr, 2)
+		
+		if i > 1
+			CreateWeldJoint(sprs[i - 1], spr, getspritex(spr), getspritey(spr) + GetSpriteHeight(spr) / 2, 0)
+		endif
+		
+		sprs.insert(spr)
+		inc x, GetSpriteWidth(spr)
+				
+	next
+	
 endfunction
 
 // ---------------------------
@@ -618,10 +692,14 @@ function maTitle()
 		buSetButVis(ma.buts[i], false)
 	next
 
+	SetSpriteVisible(ma.base, false)
+	SetSpritePhysicsOff(ma.base)
+
 	buSetButVis(ma.levBut, false)
 	buSetButVis(ma.timeBut, false)
 	buSetButVis(ma.scoreBut, false)	
 	buSetButVis(ma.startBut, false)
+	buUpdateButPos(ma.startBut)
 	buSetButVis(ma.saveBut, false)
 	
 	for i = 0 to ma.cells.length
@@ -636,6 +714,8 @@ function maTitle()
 	next
 	
 	SetTextVisible(ma.title, true)
+	
+	maDialog(false)
 	
 	ma.state = MA_STATE_TITLE
 
@@ -652,7 +732,11 @@ function maEdit()
 	buSetButVis(ma.timeBut, false)
 	buSetButVis(ma.scoreBut, false)	
 	buSetButVis(ma.startBut, true)
+	buUpdateButPos(ma.startBut)
 	buSetButVis(ma.saveBut, true)
+	
+	SetSpriteVisible(ma.base, true)
+	SetSpritePhysicsOn(ma.base, 1)
 	
 	maSelectShape()
 
@@ -669,9 +753,10 @@ function maEdit()
 
 	SetTextVisible(ma.title, false)
 	
-	maDrawButtons()
-
 	ma.state = MA_STATE_EDIT
+
+	maDialog(false)
+	maDrawButtons()
 
 endfunction
 
@@ -682,11 +767,17 @@ function maPlay()
 	
 	local i as integer
 			
+	buSetButFg(ma.startBut, ma.playImg)
+
 	buSetButVis(ma.levBut, true)
 	buSetButVis(ma.timeBut, true)
 	buSetButVis(ma.scoreBut, true)
 	buSetButVis(ma.startBut, true)
+	buUpdateButPos(ma.startBut)
 	buSetButVis(ma.saveBut, false)
+
+	SetSpriteVisible(ma.base, true)
+	SetSpritePhysicsOn(ma.base, 1)
 
 	for i = 0 to ma.cells.length
 		SetSpriteVisible(ma.cells[i].spr, true)
@@ -699,14 +790,15 @@ function maPlay()
 		buSetButVis(ma.levbuts[i], false)
 	next
 
-	SetTextVisible(ma.title, false)
-		
-	maDrawLevel()
-	maDrawScores()
-	maDrawButtons()
+	SetTextVisible(ma.title, false)	
 
 	ma.phys = false
 	ma.state = MA_STATE_PLAY
+
+	maDialog(false)
+	maDrawLevel()
+	maDrawScores()
+	maDrawButtons()
 
 endfunction
 
@@ -717,17 +809,26 @@ function maDrawButtons()
 
 	local i as integer
 	local counts as integer[MA_SHP_Z]
+	local count as integer
+	
+	count = 0
 	
 	for i = 0 to ma.shps.length
 		if ma.shps[i].sol
+			
 			inc counts[ma.shps[i].typ]
+			inc count
+			
 		endif
 	next
 	
 	for i = 0 to ma.buts.length
 		
+		coSetSpriteColor(ma.buts[i].bg, ma.butcol)
+
 		if ma.state = MA_STATE_EDIT
 			
+			buSetButAct(ma.buts[i], true)
 			buSetButVis(ma.buts[i], true)
 		
 		elseif i > 0
@@ -736,15 +837,11 @@ function maDrawButtons()
 				
 				buSetButTx(ma.buts[i], DIR_S, str(counts[i]), 0, 32)	
 				buSetButAct(ma.buts[i], true)
-				//coSetSpriteAlpha(ma.buts[i].bg, 255)
-				//coSetSpriteAlpha(ma.buts[i].fg, 255)
 
 			else
 				 
 				buSetButTx(ma.buts[i], DIR_S, "", -1, -1)
 				buSetButAct(ma.buts[i], false)
-				//coSetSpriteAlpha(ma.buts[i].bg, 63)	
-				//coSetSpriteAlpha(ma.buts[i].fg, 63)	
 				
 			endif
 
@@ -760,6 +857,20 @@ function maDrawButtons()
 				
 	next
 	
+	if ma.buts[ma.selTyp].act then coSetSpriteColor(ma.buts[ma.selTyp].bg, ma.selButCol)
+	
+	if ma.state = MA_STATE_PLAY
+			
+		if count = 0
+			buSetButAct(ma.startBut, true)
+		else
+			buSetButAct(ma.startBut, false)
+		endif
+		
+		buSetButVis(ma.startBut, true)
+		
+	endif
+	
 endfunction
 
 // ---------------------------
@@ -770,6 +881,14 @@ function maDrawScores()
 	buSetButTx(ma.levBut, DIR_C, "Level: " + str(ma.lev), -1, -1)
 	buSetButTx(ma.timeBut, DIR_C, "Time: " + str(ma.time), -1, -1)
 	buSetButTx(ma.scoreBut, DIR_C, "Score: " + str(ma.score), -1, -1)
+	
+	if ma.state = MA_STATE_FAIL
+		coSetSpriteColor(ma.scoreBut.bg, co.red[5])
+	elseif ma.state = MA_STATE_SUCC
+		coSetSpriteColor(ma.scoreBut.bg, co.green[5])
+	else
+		coSetSpriteColor(ma.scoreBut.bg, ma.butcol)
+	endif
 
 endfunction
 
@@ -837,10 +956,74 @@ function maCreateShape(shp ref as Shape, typ as integer, x as integer, y as inte
 	SetSpritePositionByOffset(spr, x * ma.s, y * ma.s)
 	coSetSpriteColor(spr, ma.typCol[typ])
 	SetSpriteDepth(spr, MA_DEPTH_SHAPE)
-	SetSpriteShape(spr, ma.shape)
-		
+	maAddShape(shp)
+			
 	shp.spr = spr
 
+endfunction
+
+// ---------------------------
+// Adds a custom shape.
+//
+function maAddShape(shp ref as Shape)
+
+	local x as float
+	local y as float
+	local spr as integer
+	local n as integer
+	local i as integer
+	
+	spr = shp.spr
+	
+	if not spr
+		exitfunction
+	endif
+	
+	SetSpriteShape(spr, ma.shape)
+	exitfunction
+	
+	if not spr
+		exitfunction
+	endif
+	
+	x = 0 -getspriteoffsetx(spr) // getspritex(spr)
+	y = 0 -getspriteoffsety(spr)
+	
+	if shp.typ = MA_SHP_J
+	
+		ClearSpriteShapes(spr)
+		
+		n = 7
+		i = 0
+		
+		SetSpriteShapeChain(spr, n, i, 0, x, y, 0)
+		inc x, ma.s
+		inc i
+		
+		SetSpriteShapeChain(spr, n, i, 0, x, y, 0)
+		inc y, ma.s
+		inc i
+		
+		SetSpriteShapeChain(spr, n, i, 0, x, y, 0)
+		inc x, ma.s * 2
+		inc i
+		
+		SetSpriteShapeChain(spr, n, i, 0, x, y, 0)
+		inc y, ma.s
+		inc i
+		
+		SetSpriteShapeChain(spr, n, i, 0, x, y, 0)
+		dec x, ma.s * 3
+		inc i
+		
+		SetSpriteShapeChain(spr, n, i, 0, x, y, 0)
+		dec y, ma.s * 2
+		inc i
+		
+		SetSpriteShapeChain(spr, n, i, 1, x, y, 0)
+		
+	endif
+	
 endfunction
 
 // ---------------------------
@@ -872,7 +1055,8 @@ function maCloneShape(shp ref as Shape, clone ref as Shape)
 	clone.spr = CloneSprite(shp.spr)
 	SetSpriteScale(clone.spr, 1, 1) // 0.5, 0.5)
 	SetSpriteDepth(clone.spr, MA_DEPTH_SHAPE)
-	SetSpriteShape(clone.spr, ma.shape)
+	//SetSpriteShape(clone.spr, ma.shape)
+	maAddShape(clone)
 	SetSpriteVisible(clone.spr, false)
 	
 endfunction
@@ -897,6 +1081,8 @@ function maUpdate()
 		maUpdatePlay()
 	elseif ma.state = MA_STATE_WAIT
 		maUpdateWait()
+	elseif ma.state = MA_STATE_SUCC or ma.state = MA_STATE_FAIL
+		maUpdateSuccFail()
 	endif
 	
 endfunction
@@ -997,70 +1183,201 @@ function maUpdateWait()
 			maTitle()
 		endif
 	endif
-
-	//for i = 0 to ma.shps.length
-	//next
-		
-	lev = ma.lev - 1
 	
-	for i = 0 to ma.shps.length
+	t = GetMilliseconds()
+	ma.time = ma.levs[ma.lev - 1].time - (t - ma.starttime) 
+	if ma.time < 0 then ma.time = 0
+	
+	//if ma.time = 0
 		
-		if ma.shps[i].spr
+		lev = ma.lev - 1
+		
+		for i = 0 to ma.shps.length
 			
-			x = GetSpriteXByOffset(ma.shps[i].spr)
-			y = GetSpriteYByOffset(ma.shps[i].spr)
-			ox = GetSpriteOffsetX(ma.shps[i].spr)
-			oy = GetSpriteOffsetY(ma.shps[i].spr)
-			
-			if mod(ma.shps[i].rot, 2) <> 0
+			if ma.shps[i].spr
 				
-				t = ox
-				ox = oy
-				oy = t
+				x = GetSpriteXByOffset(ma.shps[i].spr)
+				y = GetSpriteYByOffset(ma.shps[i].spr)
+				ox = GetSpriteOffsetX(ma.shps[i].spr)
+				oy = GetSpriteOffsetY(ma.shps[i].spr)
 				
-			endif
-			
-			rect.x = (ma.ox + ma.shps[i].x) * ma.s + ox - ma.s / 2
-			rect.y = (ma.oy + ma.shps[i].y) * ma.s + oy - ma.s / 2
-			rect.w = ma.s
-			rect.h = ma.s
-/*
-			spr = createsprite(co.pixImg)
-			SetSpriteScale(spr, 10, 10)
-			cosetspritecolor(spr, co.red[5])
-			SetSpritePositionByOffset(spr, x, y)
-			
-			spr = createsprite(co.pixImg)
-			SetSpriteScale(spr, 10, 10)
-			cosetspritecolor(spr, co.blue[5])
-			SetSpritePositionByOffset(spr, rect.x, rect.y)
+				if mod(ma.shps[i].rot, 2) <> 0
+					
+					t = ox
+					ox = oy
+					oy = t
+					
+				endif
+				
+				rect.x = (ma.ox + ma.shps[i].x) * ma.s + ox - ma.s / 2
+				rect.y = (ma.oy + ma.shps[i].y) * ma.s + oy - ma.s / 2
+				rect.w = ma.s
+				rect.h = ma.s
+	
+				// Check.
+				if not coPointWithinRect2(x, y, rect)
+					
+					if not ma.failtime
+						
+						ma.failtime = ma.time
+						log("failtime=" + str(ma.failtime))
 
-			spr = createsprite(co.pixImg)
-			SetSpriteScale(spr, 10, 10)
-			cosetspritecolor(spr, co.green[5])
-			SetSpritePositionByOffset(spr, rect.x + rect.w, rect.y + rect.h)			
-			
-			log("x=" + str(x) + ", y=" + str(y) + ", rx=" + str(rect.x) + ", ry=" + str(rect.y) + ", rw=" + str(rect.w) + ", rh=" + str(rect.h))
-*/		
-			if not coPointWithinRect2(x, y, rect)
+					endif
+		
+					if ma.time = 0
+						
+						log("T=0, fail")
+						ma.phys = false
+						maShowPhysics() // Stop physics.
+						ma.state = MA_STATE_FAIL
+						
+					endif
+								
+				endif
 				
-				//log("Movemeent on shape " + str(i))	
-				ma.phys = false
-				maShowPhysics() // Stop physics.
-				ma.state = MA_STATE_FAIL
-							
 			endif
+			
+		next
+	
+	if ma.time = 0
+		
+		if ma.state <> MA_STATE_FAIL
+			
+			ma.state = MA_STATE_SUCC
+			ma.score = ma.score + ma.levs[ma.lev - 1].time
 			
 		endif
 		
-	next
-	
-	t = GetMilliseconds()
-	
-	if t > ma.waitTime
+	endif
 		
+		//log("state=" + str(ma.state))
+		
+	//endif
+
+	maDrawScores()
+				
+endfunction
+
+// ---------------------------
+// Update succ/fail state.
+//
+function maUpdateSuccFail()
+
+	maDialog(true)
+		
+	inUpdate()
+	
+	if in.ptrPressed	
+		if buButPressed(ma.backBut)
+			maTitle()
+		elseif buButPressed(ma.nextBut)
+			maNext()
+		endif
 	endif
 
+endfunction
+
+// ---------------------------
+// Show the dialog
+//
+function maDialog(vis as integer)
+	
+	local r as integer
+	local gap as float
+	local score as integer
+	local time as integer
+	
+	gap = 8
+	
+	if vis
+		
+		if not ma.dialog
+			
+			ma.dialog = createsprite(co.pixImg)
+			SetSpriteScale(ma.dialog, co.w / 2, co.h / 4)
+			coSetSpriteColor(ma.dialog, co.grey[4])
+			SetSpritePositionByOffset(ma.dialog, co.w / 2, co.h / 2)
+			SetSpriteDepth(ma.dialog, MA_DEPTH_DIALOG)
+			
+			ma.dialogTx = coCreateText("", 0, 48)
+			SetTextAlignment(ma.dialogTx, 1)
+			SetTextPosition(ma.dialogTx, co.w / 2, getspritey(ma.dialog) + gap)
+			SetTextDepth(ma.dialogTx, MA_DEPTH_DTX)
+		
+			buCreateBut(ma.nextbut, ma.sbutImg, 0)
+			coSetSpriteColor(ma.nextbut.bg, co.blue[8])
+	
+			if ma.state = MA_STATE_SUCC
+				
+				if ma.lev < ma.levs.length + 1 // Still more levels?
+					
+					coSetTextColor(ma.dialogTx, co.green[8])
+					score = ma.levs[ma.lev - 1].time
+					SetTextString(ma.dialogTx, "You kept your balance!" + chr(10) + "You scored: " + str(score) + chr(10) + "Move on to the next level...")
+					//buSetButTx(ma.nextBut, DIR_S, "Next level", 0, 48)
+					buSetButFg(ma.nextBut, ma.nextImg)
+
+				else 
+					
+					coSetTextColor(ma.dialogTx, co.green[8])
+					score = ma.levs[ma.lev - 1].time
+					SetTextString(ma.dialogTx, "You kept your balance!" + chr(10) + "You scored: " + str(score) + chr(10) + "You've completed the game!")
+					//buSetButTx(ma.nextBut, DIR_S, "I'm done!", 0, 48)
+					buSetButFg(ma.nextBut, ma.stopImg)
+					
+				endif
+
+			elseif ma.state = MA_STATE_FAIL
+				
+				time = ma.levs[ma.lev - 1].time - ma.failtime
+				coSetTextColor(ma.dialogTx, co.red[8])
+				SetTextString(ma.dialogTx, "You kept balance for" + chr(10) + str(time) + " milliseconds." + chr(10) + "But you failed, try again?")
+				//buSetButTx(ma.nextBut, DIR_S, "Try again?", 0, 48)
+				buSetButFg(ma.nextBut, ma.retryImg)
+				
+			endif
+					
+		endif
+		
+		SetSpriteVisible(ma.dialog, true)
+		SetTextVisible(ma.dialogTx, true)
+		buSetButPos(ma.nextBut, co.w / 2, getspritey(ma.dialog) + GetSpriteHeight(ma.dialog) - GetSpriteHeight(ma.nextBut.bg))
+		buSetButVis(ma.nextBut, true)
+		
+	elseif ma.dialog
+		
+		SetSpriteVisible(ma.dialog, false)
+		SetTextVisible(ma.dialogTx, false)
+		buSetButVis(ma.nextBut, false)
+
+	endif
+		
+endfunction
+
+// ---------------------------
+// Next level.
+//
+function maNext()
+
+	if ma.state = MA_STATE_FAIL
+		
+		maPlay()
+		
+	elseif ma.state = MA_STATE_SUCC
+		
+		if ma.lev < ma.levs.length + 1 // Still more level.	
+			
+			inc ma.lev	
+			maPlay()
+			
+		else
+			 
+			maTitle()
+			
+		endif
+		
+	endif
+	
 endfunction
 
 // ---------------------------
@@ -1085,6 +1402,9 @@ function maStart()
 			
 			buSetButVis(ma.startBut, false) // Need to wait.
 			ma.state = MA_STATE_WAIT
+			maDrawScores()
+			ma.starttime = GetMilliseconds()
+			ma.failtime = 0
 			
 		endif
 		
@@ -1174,7 +1494,6 @@ function maSelectShape()
 	next
 		
 	maDrawButtons()	
-	coSetSpriteColor(ma.buts[ma.selTyp].bg, ma.selButCol)
 		
 endfunction idx
 
@@ -1203,7 +1522,8 @@ function maRotateShape(shp ref as Shape)
 	endif
 	
 	maSetRotateShape(shp)
-	SetSpriteShape(shp.spr, ma.shape)
+	//maAddShape(shp)
+	//SetSpriteShape(shp.spr, ma.shape)
 		
 endfunction
 
