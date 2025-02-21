@@ -104,7 +104,6 @@ type Main
 	base as integer
 	cells as Cell[]
 	shps as Shape[]
-	//parts as integer[MA_SHP_Z]
 	typNam as string[MA_SHP_Z]
 	typCol as integer[]
 	typImg as integer[MA_SHP_Z]
@@ -115,6 +114,7 @@ type Main
 	editImg as integer
 	nextImg as integer
 	retryImg as integer
+	helpImg as integer
 	buts as Button[]
 	sels as Shape[] // The selector shapes.
 	selTyp as integer // The selected typ.
@@ -149,7 +149,7 @@ type Main
 	dialogTxs as string[]
 	nextBut as Button	
 	dialogTx as integer
-	dialog as integer
+	dlog as integer
 	
 endtype
 
@@ -162,7 +162,6 @@ maTitle()
 do
 	
 	maUpdate()
-	maCheckColl()
 	Sync()
 	
 loop
@@ -211,7 +210,7 @@ function maInit()
 	maLoadLevels()
 	
 	//ma.typNam = [ "X", "I", "J", "L", "O", "S", "T", "Z" ]
-	ma.typNam = [ "X", "A", "A", "A", "A" ]
+	ma.typNam = [ "X", "A", "B", "C", "D", "W" ]
 	
 	//ma.typCol.insert(makecolor(255, 255, 255))
 	//ma.typCol.insert(makecolor(0, 255, 255))
@@ -227,6 +226,7 @@ function maInit()
 	ma.typCol.insert(makecolor(0, 255, 0))
 	ma.typCol.insert(makecolor(0, 0, 255))
 	ma.typCol.insert(makecolor(255, 255, 0))
+	ma.typCol.insert(makecolor(255, 255, 255))
 
 	for i = 0 to ma.typNam.length
 		ma.typImg[i] = loadimage("shps/" + ma.typNam[i] + ".png")		
@@ -239,6 +239,7 @@ function maInit()
 	ma.editImg = loadimage("gfx/edit.png")
 	ma.nextImg = loadimage("gfx/next.png")
 	ma.retryImg = loadimage("gfx/retry.png")
+	ma.helpImg = loadimage("gfx/help.png")
 	
 	ma.sButImg = loadimage("gfx/sbut.png")
 	ma.mbutImg = loadimage("gfx/mbut.png")
@@ -257,8 +258,8 @@ function maInit()
 	ma.sels.insert(shp)
 	maCreateShape(shp, MA_SHP_O, 0, 0)
 	ma.sels.insert(shp)
-	//maCreateShape(shp, MA_SHP_S, 0, 0)
-	//ma.sels.insert(shp)
+	maCreateShape(shp, MA_SHP_S, 0, 0)
+	ma.sels.insert(shp)
 	//maCreateShape(shp, MA_SHP_T, 0, 0)
 	//ma.sels.insert(shp)
 	//maCreateShape(shp, MA_SHP_Z, 0, 0)
@@ -287,10 +288,17 @@ function maInit()
 		buSetButScale(but, 0.7, 0.7)
 		
 		//if i = MA_SHP_X or i = MA_SHP_O
-		//	buFitFg(but, 0, 32)
-		//else
+		if i = MA_SHP_I
+			buFitFg(but, 0, 32)
+		elseif i = MA_SHP_J
+			buFitFg(but, 0, 24)
+		elseif i = MA_SHP_L
+			buFitFg(but, 0, 16)			
+		elseif i = MA_SHP_O
+			buFitFg(but, 0, 64)
+		else
 			buFitFg(but, 0, 0)
-		//endif
+		endif
 		
 		coSetSpriteColor(but.bg, ma.butCol)
 		buSetButPos(but, x, y)
@@ -555,7 +563,7 @@ function maSaveLevel()
 		ss.x = ma.shps[i].x
 		ss.y = ma.shps[i].y
 		ss.rot = ma.shps[i].rot
-		ss.sol = 0
+		ss.sol = ma.shps[i].sol
 		
 		sl.shps.insert(ss)
 		
@@ -563,7 +571,8 @@ function maSaveLevel()
 			
 	SetFolder("levs")
 	
-	name = "newlevel.txt"
+	name = str(ma.levs.length + 2) + ".txt"
+	//name = "newlevel.txt"
 	fh = OpenToWrite(name)
 	s = sl.tojson()
 	s = ReplaceString(s, chr(10), " ", -1)
@@ -831,7 +840,7 @@ function maDrawButtons()
 			buSetButAct(ma.buts[i], true)
 			buSetButVis(ma.buts[i], true)
 		
-		elseif i > 0
+		elseif i > 0 and i < MA_SHP_S
 			
 			if counts[i]
 				
@@ -869,6 +878,11 @@ function maDrawButtons()
 		
 		buSetButVis(ma.startBut, true)
 		
+	elseif ma.state = MA_STATE_EDIT
+
+		buSetButAct(ma.startBut, true)
+		buSetButVis(ma.startBut, true)
+		
 	endif
 	
 endfunction
@@ -902,29 +916,44 @@ function maDrawLevel()
 	local lev as integer
 	
 	maClean()
+
+	lev = ma.lev - 1
 	
-	if ma.lev <= ma.levs.length + 1
-		
-		lev = ma.lev - 1
-				
+	if lev > -1 and lev <= ma.levs.length
+			
 		for i = 0 to ma.levs[lev].shps.length
 			
-			if not ma.levs[lev].shps[i].sol	
+			if ma.state = MA_STATE_PLAY
+				
+				if not ma.levs[lev].shps[i].sol	
+					
+					maCreateShape(shp, ma.levs[lev].shps[i].typ, ma.levs[lev].shps[i].x, ma.levs[lev].shps[i].y)
+					
+				else
+					
+					shp.typ = ma.levs[lev].shps[i].typ
+					shp.x = ma.levs[lev].shps[i].x
+					shp.y = ma.levs[lev].shps[i].y
+					shp.spr = 0
+					
+				endif
+				
+			elseif ma.state = MA_STATE_EDIT
 				
 				maCreateShape(shp, ma.levs[lev].shps[i].typ, ma.levs[lev].shps[i].x, ma.levs[lev].shps[i].y)
-				
-			else
-				
-				shp.typ = ma.levs[lev].shps[i].typ
-				shp.x = ma.levs[lev].shps[i].x
-				shp.y = ma.levs[lev].shps[i].y
-				shp.spr = 0
 				
 			endif
 			
 			shp.rot = ma.levs[lev].shps[i].rot
 			shp.sol = ma.levs[lev].shps[i].sol
-			if shp.spr then maSetRotateShape(shp)
+
+			if shp.spr
+				
+				maSetRotateShape(shp)
+				if shp.sol then coSetSpriteAlpha(shp.spr, 127)
+				
+			endif
+				
 			ma.shps.insert(shp)
 				
 		next
@@ -1059,13 +1088,6 @@ function maCloneShape(shp ref as Shape, clone ref as Shape)
 	maAddShape(clone)
 	SetSpriteVisible(clone.spr, false)
 	
-endfunction
-
-// ---------------------------
-// Check if there's been a collsion between a sprite and the ground.
-//
-function maCheckColl()
-
 endfunction
 
 // ---------------------------
@@ -1286,33 +1308,36 @@ function maDialog(vis as integer)
 	local gap as float
 	local score as integer
 	local time as integer
+	local lev as integer
 	
 	gap = 8
 	
 	if vis
 		
-		if not ma.dialog
+		if not ma.dlog
 			
-			ma.dialog = createsprite(co.pixImg)
-			SetSpriteScale(ma.dialog, co.w / 2, co.h / 4)
-			coSetSpriteColor(ma.dialog, co.grey[4])
-			SetSpritePositionByOffset(ma.dialog, co.w / 2, co.h / 2)
-			SetSpriteDepth(ma.dialog, MA_DEPTH_DIALOG)
+			ma.dlog = createsprite(co.pixImg)
+			SetSpriteScale(ma.dlog, co.w / 2, co.h / 4)
+			coSetSpriteColor(ma.dlog, co.grey[4])
+			SetSpritePositionByOffset(ma.dlog, co.w / 2, co.h / 2)
+			SetSpriteDepth(ma.dlog, MA_DEPTH_DIALOG)
 			
 			ma.dialogTx = coCreateText("", 0, 48)
 			SetTextAlignment(ma.dialogTx, 1)
-			SetTextPosition(ma.dialogTx, co.w / 2, getspritey(ma.dialog) + gap)
+			SetTextPosition(ma.dialogTx, co.w / 2, getspritey(ma.dlog) + gap)
 			SetTextDepth(ma.dialogTx, MA_DEPTH_DTX)
 		
 			buCreateBut(ma.nextbut, ma.sbutImg, 0)
 			coSetSpriteColor(ma.nextbut.bg, co.blue[8])
 	
+			lev = ma.lev - 1
+			
 			if ma.state = MA_STATE_SUCC
 				
-				if ma.lev < ma.levs.length + 1 // Still more levels?
+				if lev <= ma.levs.length // Still more levels?
 					
 					coSetTextColor(ma.dialogTx, co.green[8])
-					score = ma.levs[ma.lev - 1].time
+					score = ma.levs[lev].time
 					SetTextString(ma.dialogTx, "You kept your balance!" + chr(10) + "You scored: " + str(score) + chr(10) + "Move on to the next level...")
 					//buSetButTx(ma.nextBut, DIR_S, "Next level", 0, 48)
 					buSetButFg(ma.nextBut, ma.nextImg)
@@ -1320,7 +1345,7 @@ function maDialog(vis as integer)
 				else 
 					
 					coSetTextColor(ma.dialogTx, co.green[8])
-					score = ma.levs[ma.lev - 1].time
+					score = ma.levs[lev].time
 					SetTextString(ma.dialogTx, "You kept your balance!" + chr(10) + "You scored: " + str(score) + chr(10) + "You've completed the game!")
 					//buSetButTx(ma.nextBut, DIR_S, "I'm done!", 0, 48)
 					buSetButFg(ma.nextBut, ma.stopImg)
@@ -1339,14 +1364,14 @@ function maDialog(vis as integer)
 					
 		endif
 		
-		SetSpriteVisible(ma.dialog, true)
+		SetSpriteVisible(ma.dlog, true)
 		SetTextVisible(ma.dialogTx, true)
-		buSetButPos(ma.nextBut, co.w / 2, getspritey(ma.dialog) + GetSpriteHeight(ma.dialog) - GetSpriteHeight(ma.nextBut.bg))
+		buSetButPos(ma.nextBut, co.w / 2, getspritey(ma.dlog) + GetSpriteHeight(ma.dlog) - GetSpriteHeight(ma.nextBut.bg))
 		buSetButVis(ma.nextBut, true)
 		
-	elseif ma.dialog
+	elseif ma.dlog
 		
-		SetSpriteVisible(ma.dialog, false)
+		SetSpriteVisible(ma.dlog, false)
 		SetTextVisible(ma.dialogTx, false)
 		buSetButVis(ma.nextBut, false)
 
@@ -1359,13 +1384,17 @@ endfunction
 //
 function maNext()
 
+	local lev as integer
+	
 	if ma.state = MA_STATE_FAIL
 		
 		maPlay()
 		
 	elseif ma.state = MA_STATE_SUCC
 		
-		if ma.lev < ma.levs.length + 1 // Still more level.	
+		lev = ma.lev - 1
+		
+		if ma.lev <= ma.levs.length // Still more level.	
 			
 			inc ma.lev	
 			maPlay()
@@ -1458,7 +1487,7 @@ function maSelectShape()
 	local idx as integer
 	local butok as integer
 	local count as integer
-	
+		
 	idx = -1
 	
 	for i = 0 to ma.buts.length
@@ -1474,14 +1503,14 @@ function maSelectShape()
 		if butok and buButPressed(ma.buts[i])
 			
 			if i = ma.selTyp
-				if i > 0				
+				if i > 0 and i < MA_SHP_S			
 					maRotateShape(ma.sels[ma.selTyp])					
 				endif
 			else
 				ma.selTyp = i
 			endif
 				
-			if ma.selTyp
+			if ma.selTyp and ma.selTyp < MA_SHP_S
 				maCloneShape(ma.sels[ma.selTyp], ma.selShp)
 			endif
 			
@@ -1492,6 +1521,12 @@ function maSelectShape()
 		endif
 		
 	next
+	
+	if idx = -1
+		if in.ptry < ma.cells[0].y * ma.s
+			idx = -2
+		endif
+	endif
 		
 	maDrawButtons()	
 		
@@ -1503,7 +1538,6 @@ endfunction idx
 function maRotateShape(shp ref as Shape)
 	
 	if shp.typ = MA_SHP_I or shp.typ = MA_SHP_S or shp.typ = MA_SHP_Z
-		
 		if shp.rot = 0
 			shp.rot = 1	
 		elseif shp.rot = 1
@@ -1518,7 +1552,13 @@ function maRotateShape(shp ref as Shape)
 			shp.rot = 3
 		elseif shp.rot = 3
 			shp.rot = 0			
-		endif		
+		endif	
+	elseif shp.typ = MA_SHP_O // Hack for Sol
+		if shp.rot = 0
+			shp.rot = 1	
+		elseif shp.rot = 1
+			shp.rot = 0			
+		endif
 	endif
 	
 	maSetRotateShape(shp)
@@ -1555,7 +1595,7 @@ function maDropShape()
 	local shpdel as integer
 	local spr as integer
 	
-	if ma.selTyp // Not deleting.
+	if ma.selTyp and ma.selTyp < MA_SHP_S // Not deleting.
 				
 		if ma.state = MA_STATE_EDIT
 			ma.shps.insert(ma.selShp)
@@ -1579,6 +1619,34 @@ function maDropShape()
 		ma.selTyp = MA_SHP_X
 		maSelectShape()
 				
+	elseif ma.selTyp = MA_SHP_S
+		
+		if ma.state = MA_STATE_EDIT
+			
+			spr = GetSpriteHit(in.ptrX, in.ptrY)
+			
+			for i = 0 to ma.shps.length
+				if spr = ma.shps[i].spr
+					
+					if ma.shps[i].sol
+						
+						coSetSpriteAlpha(ma.shps[i].spr, 255)
+						ma.shps[i].sol = false
+						
+					else 
+						
+						coSetSpriteAlpha(ma.shps[i].spr, 127)
+						ma.shps[i].sol = true
+						
+					endif
+					
+					exit
+					
+				endif
+			next
+			
+		endif
+
 	else // Delete?
 
 		spr = GetSpriteHit(in.ptrX, in.ptrY)
@@ -1695,7 +1763,7 @@ function maHoverCell()
 	//local w as float
 	//local h as float
 	
-	if ma.selTyp
+	if ma.selTyp and ma.selTyp < MA_SHP_S
 		
 		idx = maFindCell()
 		
