@@ -1536,7 +1536,7 @@ function maEditTime()
 	endif
 
 	ma.state = MA_STATE_EDITTIME
-	SetEditBoxText(ma.editTime, str(ma.levs[ma.lev].time))
+	SetEditBoxText(ma.editTime, str(ma.time))
 	SetEditBoxVisible(ma.edittime, true)
 	SetEditBoxFocus(ma.editTime, true)
 	SetTextVisible(ma.edittitle, true)
