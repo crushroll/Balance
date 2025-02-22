@@ -28,8 +28,8 @@
 #constant MA_MAX_TIME = 10000
 
 #constant MA_TITLE_HELP_MAX = 3
-#constant MA_EDIT_HELP_MAX = 5
-#constant MA_PLAY_HELP_MAX = 3
+#constant MA_EDIT_HELP_MAX = 6
+#constant MA_PLAY_HELP_MAX = 6
 
 #constant MA_SHP_X = 0
 #constant MA_SHP_I = 1
@@ -149,6 +149,7 @@ type Main
 	editBut as Button
 	helpBut as Button
 	addBut as Button
+	retryBut as Button
 	butCol as integer
 	selButCol as integer
 	lev as integer
@@ -179,6 +180,7 @@ type Main
 	edittitle as integer
 	best as integer // Text.
 	bestscore as integer // score value.
+	dirsfont as integer
 	
 endtype
 
@@ -214,8 +216,8 @@ function maInit()
 	local sc as float
 	
 	ma.s = 64
-	ma.w = 20
-	ma.h = 20
+	ma.w = 21
+	ma.h = 21
 	ma.ox = 0
 	ma.oy = 3
 	ma.pw = (ma.w + ma.ox) * ma.s
@@ -238,7 +240,8 @@ function maInit()
 	ma.selCol2 = co.blue[8]
 	ma.playCol1 = co.grey[5]
 	ma.playCol2 = co.grey[7]
-	ma.font = 3
+	ma.font = 2
+	ma.dirsfont = 30
 
 	ma.readPath = GetReadPath()
 	ma.writePath = GetWritePath()
@@ -361,7 +364,7 @@ function maInit()
 	x = x - GetSpriteWidth(ma.startBut.bg) / 2 - GetSpriteWidth(ma.levBut.bg) / 2 - ma.gap * 3
 	y = y - GetSpriteHeight(ma.startBut.bg) / 2 + GetSpriteHeight(ma.levBut.bg) / 2
 	coSetSpriteColor(ma.levBut.bg, ma.butCol)
-	buSetButTx(ma.levBut, DIR_C, "Level: 1", ma.font, 24)
+	buSetButTx(ma.levBut, DIR_C, "Level: 1", ma.font, ma.dirsfont)
 	buSetButPos(ma.levBut, x, y)
 	inc y, GetSpriteHeight(ma.levBut.bg) + ma.gap
 	buSetButVis(ma.levBut, false)
@@ -369,7 +372,7 @@ function maInit()
 	buCreateBut(ma.timeBut, ma.xlButImg, 0)
 	buSetButScale(ma.timeBut, sc, sc)
 	coSetSpriteColor(ma.timeBut.bg, ma.butCol)
-	buSetButTx(ma.timeBut, DIR_C, "Time: 0", ma.font, 24)
+	buSetButTx(ma.timeBut, DIR_C, "Time: 0", ma.font, ma.dirsfont)
 	buSetButPos(ma.timeBut, x, y)
 	inc y, GetSpriteHeight(ma.levBut.bg) + ma.gap
 	buSetButVis(ma.timeBut, false)
@@ -377,7 +380,7 @@ function maInit()
 	buCreateBut(ma.scoreBut, ma.xlButImg, 0)
 	buSetButScale(ma.scoreBut, sc, sc)
 	coSetSpriteColor(ma.scoreBut.bg, ma.butCol)
-	buSetButTx(ma.scoreBut, DIR_C, "Score: 0", ma.font, 24)
+	buSetButTx(ma.scoreBut, DIR_C, "Score: 0", ma.font, ma.dirsfont)
 	buSetButPos(ma.scoreBut, x, y)
 	inc y, GetSpriteHeight(ma.levBut.bg) + ma.gap
 	buSetButVis(ma.scoreBut, false)
@@ -395,9 +398,14 @@ function maInit()
 	buCreateBut(ma.editBut, ma.sButImg, ma.editImg)
 	buSetButScale(ma.editBut, 0.5, 0.5)
 	coSetSpriteColor(ma.editBut.bg, ma.butCol)
-	//buSetButPos(ma.editBut, GetSpriteWidth(ma.editBut.bg) / 2 + ma.gap * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
 	buSetButPos(ma.editBut, GetSpriteWidth(ma.editBut.bg) * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
 	buSetButVis(ma.editBut, false)
+
+	buCreateBut(ma.retryBut, ma.sButImg, ma.retryImg)
+	buSetButScale(ma.retryBut, 0.5, 0.5)
+	coSetSpriteColor(ma.retryBut.bg, ma.butCol)
+	buSetButPos(ma.retryBut, GetSpriteWidth(ma.editBut.bg) * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
+	buSetButVis(ma.retryBut, false)
 	
 	inc x, GetSpriteWidth(ma.editbut.bg) + ma.gap * 3
 
@@ -929,27 +937,27 @@ function maTitle()
 	if not ma.addbut.bg
 				
 		buCreateBut(ma.addBut, ma.sButImg, ma.addImg)
-		buSetButTx(ma.addBut, DIR_S, "Add", ma.font, 24)
-		sc = ma.s / GetSpriteWidth(ma.addBut.bg)
-		buSetButScale(ma.addBut, sc, 0.5)
+		buSetButTx(ma.addBut, DIR_S, "Add", ma.font, n * ma.dirsfont)
+		//sc = ma.s / GetSpriteWidth(ma.addBut.bg)
+		//buSetButScale(ma.addBut, sc, 0.5)
+		if n = 1
+			
+			sc = ma.s / GetSpriteWidth(ma.addBut.bg)
+			buSetButScale(ma.addbut, sc, sc)	
+			
+		endif
 		
 	endif
 
 	coSetSpriteColor(ma.addBut.bg, col)
-	
-	if ma.levs.length > -1
-		
-		xx = GetSpriteXByOffset(ma.levbuts[ma.levbuts.length].bg) + ma.s
-		yy = GetSpriteYByOffset(ma.levbuts[ma.levbuts.length].bg)
-	
-	else 
-		
-		xx = x * ma.s + ma.s / 2
-		yy = y * ma.s + ma.s / 2
-		
+
+	if n = 1
+		buSetButPos(ma.addbut, x * ma.s + ma.s / 2, y * ma.s + ma.s / 2)
+	else
+		buSetButPos(ma.addbut, x * ma.s, y * ma.s)
 	endif
 
-	buSetButPos(ma.addBut, xx, yy)
+	//buSetButPos(ma.addBut, xx, yy)
 	buSetButVis(ma.addbut, ma.editAct)
 
 	for i = 0 to ma.buts.length	
@@ -973,6 +981,7 @@ function maTitle()
 	buSetButVis(ma.backBut, true)
 	buSetButVis(ma.editBut, true)
 	buSetButVis(ma.helpbut, true)
+	buSetButVis(ma.retryBut, false)
 
 	for i = 0 to ma.levbuts.length	
 		buSetButVis(ma.levbuts[i], true)
@@ -1009,6 +1018,7 @@ function maEdit()
 	buSetButVis(ma.backBut, true)
 	buSetButVis(ma.saveBut, true)
 	buSetButVis(ma.editBut, false)
+	buSetButVis(ma.retryBut, false)
 	buSetButVis(ma.addBut, false)
 	buSetButVis(ma.helpbut, true)
 	coSetSpriteColor(ma.helpbut.bg, ma.butCol)
@@ -1100,11 +1110,15 @@ function maPlay()
 	buSetButVis(ma.startBut, true)
 	buUpdateButPos(ma.startBut)
 	
+	buSetButAct(ma.helpBut, true)
+	buSetButAct(ma.retryBut, true)
+
 	buSetButVis(ma.saveBut, false)
 	buSetButVis(ma.editBut, false)
+	buSetButVis(ma.retryBut, true)
 	buSetButVis(ma.addBut, false)
 	buSetButVis(ma.helpbut, true)
-
+	
 	buSetButVis(ma.backBut, true)
 	buSetButVis(ma.editBut, false)
 	coSetSpriteColor(ma.helpbut.bg, ma.butCol)
@@ -1182,7 +1196,7 @@ function maDrawButtons()
 			
 				if counts[i]
 					
-					buSetButTx(ma.buts[i], DIR_S, str(counts[i]), ma.font, 32)	
+					buSetButTx(ma.buts[i], DIR_S, str(counts[i]), ma.font, ma.dirsfont)	
 					buSetButAct(ma.buts[i], true)
 	
 				else
@@ -1608,6 +1622,8 @@ function maUpdatePlay()
 			maTitle()
 		elseif buButPressed(ma.helpBut)
 			maHelp(true, 0)
+		elseif buButPressed(ma.retryBut)
+			maNext()
 		elseif buButPressed(ma.startBut)
 			maStart()
 		elseif maSelectShape() = -1
@@ -1842,12 +1858,12 @@ function maHelp(vis as integer, delta as integer)
 		if not ma.help
 			
 			ma.help = createsprite(co.pixImg)
-			SetSpriteScale(ma.help, ma.s * 6, ma.s * 4)
+			SetSpriteScale(ma.help, ma.s * 6, ma.s * 5)
 			coSetSpriteColor(ma.help, co.grey[4])
 			coSetSpriteColor(ma.help, co.yellow[7])
 			SetSpriteDepth(ma.help, MA_DEPTH_DIALOG)
 			
-			ma.helpTx = coCreateText("", ma.font, 24)
+			ma.helpTx = coCreateText("", ma.font, ma.dirsfont)
 			SetTextAlignment(ma.helpTx, 1)
 			SetTextDepth(ma.helpTx, MA_DEPTH_DTX)
 			SetTextMaxWidth(ma.helpTx, GetSpriteWidth(ma.help) - ma.gap * 4)
@@ -1931,33 +1947,39 @@ function maHelp(vis as integer, delta as integer)
 				
 				x = 5
 				y = 1
-				s = s + "Press a red, gree, blue or yellow shape button, now move the mouse to the board and place a shape." + chr(10) + "Press an already selected shape buttonn to rotate it."
-			
+				s = s + "Press and release a shape button to select a shape (the button will turn blue). If you want to rotate the shape, press an already selected shape button again."
+		
 			elseif ma.helpIdx = 1
+				
+				x = 5
+				y = 1
+				s = s + "Move the pointer to move the selected shape over the board to where you want it, then press to place it on the board."
+		
+			elseif ma.helpIdx = 2
 				
 				x = 3
 				y = 1
 				s = s + "Press the X button then click on a shape on the board to delete."
 
-			elseif ma.helpIdx = 2
+			elseif ma.helpIdx = 3
 
 				x = 11
 				y = 1
-				s = s + "Press the -/+ button, then click on a shape on the board to toggle hide/show." + chr(10) + "These shapes will be what the player needs to place when playing the level."
-							
-			elseif ma.helpIdx = 3
-
-				x = 13
-				y = 1
-				s = s + "Press the Time button to set the time limit for the level."
+				s = s + "Press the -/+ button, then click on a shape to toggle hide/show." + chr(10) + "Transparent shapes (in the editor) are what player needs to place when playing."
 							
 			elseif ma.helpIdx = 4
 
-				x = 14
+				x = 13
 				y = 1
-				s = s + "Press the play button to test the level. You should aim for the balance of the level to not fall within the time limit. To reset testing, press stop."
-
+				s = s + "Press the Time button to set the time limit for the level. You can edit the value and pressed ENTER. Press ESC to not change."
+							
 			elseif ma.helpIdx = 5
+
+				x = 13
+				y = 1
+				s = s + "Press the play (>) button to test the level. You should aim for the balance of the level to not fall within the time limit. To reset testing, press stop."
+
+			elseif ma.helpIdx = 6
 
 				x = 1
 				y = 1
@@ -1973,25 +1995,44 @@ function maHelp(vis as integer, delta as integer)
 				
 				x = 1
 				y = 1
-				s = s + "The level will show the structure, you must place the remaining pieces and see if you can keep it balanced!"
+				s = s + "The level will show a structure, you must place the remaining shapes on the board and see if you can keep it balanced!"
 						
 			elseif ma.helpIdx = 1
 				
 				x = 5
 				y = 1
-				s = s + "The shape buttons (red, green, blue, yellow) are selectable if there are 1 or more shapes shown." + chr(10) + "You need to place all shapes on the board."
+				s = s + "Some shape buttons (red, green, blue, yellow) will show a number, this is how many of that shape you need to place on the board."
 			
 			elseif ma.helpIdx = 2
 				
 				x = 5
 				y = 1
-				s = s + "Press a button to select a shape, move the mouse over to place the shape on the board. Press an already selected shape, to rotate it."
+				s = s + "Press and release a shape button to select a shape (the button will turn blue). If you want to rotate the shape, press an already selected shape button again."
 			
 			elseif ma.helpIdx = 3
 				
-				x = 14
+				x = 7
 				y = 1
-				s = s + "Once you've placed all shapes, press the play button to test your layout." + chr(10) + "If the structure remains balanced for the time limit, you will win the level."
+				s = s + "Move the pointer to move the selected shape over the board to where you want it, then press to place it on the board."
+
+			elseif ma.helpIdx = 4
+				
+				x = 1
+				y = 1
+				s = s + "If you make a mistake placing a shape, press the retry button to restart the level."
+
+
+			elseif ma.helpIdx = 5
+				
+				x = 13
+				y = 1
+				s = s + "Once all required shapes are in place, press the play button to test your layout."
+
+			elseif ma.helpIdx = 6
+				
+				x = 11
+				y = 1
+				s = s + "If the structure remains balanced for the time limit, you will win the level."
 			
 			endif
 					
@@ -2028,7 +2069,7 @@ function maDialog(vis as integer)
 			SetSpritePosition(ma.dlog, (ma.ox + 5) * ma.s, (ma.oy + 7) * ma.s)
 			SetSpriteDepth(ma.dlog, MA_DEPTH_DIALOG)
 			
-			ma.dialogTx = coCreateText("", ma.font, 32)
+			ma.dialogTx = coCreateText("", ma.font, ma.dirsfont)
 			SetTextAlignment(ma.dialogTx, 1)
 			SetTextDepth(ma.dialogTx, MA_DEPTH_DTX)
 		
@@ -2093,7 +2134,11 @@ function maNext()
 
 	local lev as integer
 	
-	if ma.state = MA_STATE_FAIL
+	if ma.state = MA_STATE_PLAY // Retry
+		
+		maPlay()
+
+	elseif ma.state = MA_STATE_FAIL
 		
 		maPlay()
 		
@@ -2137,6 +2182,8 @@ function maStart()
 		
 		if ma.state = MA_STATE_PLAY
 			
+			buSetButAct(ma.helpBut, false)
+			buSetButAct(ma.retryBut, false)
 			buSetButAct(ma.startBut, false) // Make it not accessible.
 			ma.state = MA_STATE_WAIT
 			maDrawScores()
