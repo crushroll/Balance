@@ -75,6 +75,7 @@ endtype
 
 type Level
 	
+	nbr as integer // For sorting.
 	time as integer
 	shps as Shape[] // String shape.
 	
@@ -534,6 +535,7 @@ function maLoadLevels()
 	local j as integer
 	local pos as integer
 	local nbr as integer
+	local nbrs as integer[]
 	
 	setfolder("/media")
 	setfolder("levs")
@@ -547,17 +549,21 @@ function maLoadLevels()
 		pos = findstring(file, ".")
 		nbr = val(mid(file, 1, pos - 1)) // sl.nbr
 		
-		for j = 0 to ma.levs.length
-			log("existing level=" + str(j))
-			if j = nbr
+		for j = 0 to nbrs.length
+			if nbrs[j] = nbr
+				log("existing level=" + str(j))
 				continue // Ignore previously loaded levels to ensure we don't load twice.
 			endif
 		next
 		
+		nbrs.insert(nbr)
+				
 		log("folder=" + getfolder() + ", file=" + file)
 		s = maLoadFile(file)
+		
 		sl.fromjson(s)
 		
+		lev.nbr = nbr
 		lev.time = sl.time
 		
 		if lev.time < MA_MIN_TIME
@@ -565,9 +571,9 @@ function maLoadLevels()
 		elseif lev.time > MA_MAX_TIME
 			lev.time = MA_MAX_TIME
 		endif
-			
-		//lev.parts = sl.parts
 		
+		lev.shps.length = -1 // Clear for reuse.
+			
 		for i = 0 to sl.shps.length
 			
 			shp.typ = sl.shps[i].typ
@@ -580,13 +586,15 @@ function maLoadLevels()
 			
 		next
 		
-		ma.levs.insertsorted(lev)
+		ma.levs.insert(lev)
 		
 		file = getnextfile()
 		
 	endwhile
 	
 	setfolder("/media")
+	
+	ma.levs.sort()
 				
 endfunction
 
@@ -939,7 +947,7 @@ function maEdit()
 	SetTextVisible(ma.title, false)
 	SetTextVisible(ma.best, false)
 
-	buSetButVis(ma.levBut, false)
+	buSetButVis(ma.levBut, true)
 	buSetButVis(ma.timeBut, false)
 	buSetButVis(ma.scoreBut, false)	
 	buSetButVis(ma.startBut, true)
@@ -1206,7 +1214,7 @@ function maDrawLevel()
 	maClean()
 
 	lev = ma.lev
-	
+
 	if lev > -1 and lev <= ma.levs.length
 			
 		for i = 0 to ma.levs[lev].shps.length
@@ -1238,7 +1246,7 @@ function maDrawLevel()
 			if shp.spr
 				
 				maSetRotateShape(shp)
-				if shp.sol then coSetSpriteAlpha(shp.spr, 63)
+				if shp.sol then coSetSpriteAlpha(shp.spr, 127)
 				
 			endif
 				
@@ -2254,7 +2262,7 @@ function maDropShape()
 						
 					else 
 						
-						coSetSpriteAlpha(ma.shps[i].spr, 63)
+						coSetSpriteAlpha(ma.shps[i].spr, 127)
 						ma.shps[i].sol = true
 						
 					endif
