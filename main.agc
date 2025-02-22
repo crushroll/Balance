@@ -23,7 +23,7 @@
 #constant MA_DEPTH_EDIT = 2000
 
 #constant MA_EDIT_HELP_MAX = 5
-#constant MA_PLAY_HELP_MAX = 2
+#constant MA_PLAY_HELP_MAX = 3
 
 #constant MA_SHP_X = 0
 #constant MA_SHP_I = 1
@@ -704,13 +704,13 @@ function maTitle()
 		
 		col = ma.selCol1
 		coSetSpriteColor(ma.editBut.bg, ma.selCol1)
-		buSetButTx(ma.editBut, DIR_S, "Edit level", 0, 24)
+		buSetButTx(ma.editBut, DIR_S, "Edit a level", 0, 24)
 
 	else 
 		
 		col = ma.playCol1
 		coSetSpriteColor(ma.editBut.bg, ma.butCol)
-		buSetButTx(ma.editBut, DIR_S, "Play level", 0, 24)
+		buSetButTx(ma.editBut, DIR_S, "Play a level", 0, 24)
 		
 	endif
 
@@ -1567,7 +1567,7 @@ function maHelp(vis as integer, delta as integer)
 			ma.helpTx = coCreateText("", 0, 24)
 			SetTextAlignment(ma.helpTx, 1)
 			SetTextDepth(ma.helpTx, MA_DEPTH_DTX)
-			SetTextMaxWidth(ma.helpTx, GetSpriteWidth(ma.help))
+			SetTextMaxWidth(ma.helpTx, GetSpriteWidth(ma.help) - ma.gap * 4)
 			coSetTextColor(ma.helptx, co.grey[8])
 		
 			buCreateBut(ma.helpprevbut, ma.sbutImg, ma.previmg)
@@ -1628,13 +1628,13 @@ function maHelp(vis as integer, delta as integer)
 
 			elseif ma.helpIdx = 2
 
-				x = 10
+				x = 11
 				y = 1
 				s = s + "Press the -/+ button, then click on a shape on the board to toggle hide/show (indicated by fading)." + chr(10) + "These shapes will be what the player needs to place when playing the level."
 							
 			elseif ma.helpIdx = 3
 
-				x = 12
+				x = 13
 				y = 1
 				s = s + "Press the Time button to set the time limit for the level."
 							
@@ -1651,7 +1651,37 @@ function maHelp(vis as integer, delta as integer)
 				s = s + "Press the save button to save the level. The saved level will now be shown in the title screen."
 							
 			endif
+	
+		elseif ma.state = MA_STATE_PLAY
 			
+			s = str(ma.helpIdx + 1) + "/" + str(m + 1) + chr(10)
+
+			if ma.helpIdx = 0
+				
+				x = 1
+				y = 1
+				s = s + "The level will show the structure, you must place the remaining pieces and see if you can keep it balanced!"
+						
+			elseif ma.helpIdx = 1
+				
+				x = 5
+				y = 1
+				s = s + "The shape buttons (red, green, blue, yellow) are selectable if there are 1 or more shapes shown." + chr(10) + "You need to place all shapes on the board."
+			
+			elseif ma.helpIdx = 2
+				
+				x = 5
+				y = 1
+				s = s + "Press a button to select a shape, move the mouse over to place the shape on the board. Press an already selected shape, to rotate it."
+			
+			elseif ma.helpIdx = 3
+				
+				x = 14
+				y = 1
+				s = s + "Once you've placed all shapes, press the play button to test your layout." + chr(10) + "If the structure remains balanced for the time limit, you will win the level and gain the score."
+			
+			endif
+					
 		endif
 
 		SetSpritePosition(ma.help, (ma.ox + x) * ma.s, (ma.oy + y) * ma.s)	
