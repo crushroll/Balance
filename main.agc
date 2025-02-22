@@ -1469,54 +1469,58 @@ function maDialog(vis as integer)
 		if not ma.dlog
 			
 			ma.dlog = createsprite(co.pixImg)
-			SetSpriteScale(ma.dlog, co.w / 2, co.h / 4)
+			SetSpriteScale(ma.dlog, ma.s * 11, ma.s * 7)
 			coSetSpriteColor(ma.dlog, co.grey[4])
-			SetSpritePositionByOffset(ma.dlog, co.w / 2, co.h / 2)
+			SetSpritePosition(ma.dlog, (ma.ox + 5) * ma.s, (ma.oy + 7) * ma.s)
 			SetSpriteDepth(ma.dlog, MA_DEPTH_DIALOG)
 			
 			ma.dialogTx = coCreateText("", 0, 48)
 			SetTextAlignment(ma.dialogTx, 1)
-			SetTextPosition(ma.dialogTx, co.w / 2, getspritey(ma.dlog) + gap)
 			SetTextDepth(ma.dialogTx, MA_DEPTH_DTX)
 		
 			buCreateBut(ma.nextbut, ma.sbutImg, 0)
 			coSetSpriteColor(ma.nextbut.bg, co.blue[8])
+			buSetButScale(ma.nextBut, 0.5, 0.5)
 	
-			lev = ma.lev
-			
-			if ma.state = MA_STATE_SUCC
-				
-				if lev < ma.levs.length // Still more levels?
-					
-					coSetTextColor(ma.dialogTx, co.green[8])
-					score = ma.levs[lev].time
-					SetTextString(ma.dialogTx, "You kept your balance!" + chr(10) + "You scored: " + str(score) + chr(10) + "Move on to the next level...")
-					//buSetButTx(ma.nextBut, DIR_S, "Next level", 0, 48)
-					buSetButFg(ma.nextBut, ma.nextImg)
-
-				else 
-					
-					coSetTextColor(ma.dialogTx, co.green[8])
-					score = ma.levs[lev].time
-					SetTextString(ma.dialogTx, "You kept your balance!" + chr(10) + "You scored: " + str(score) + chr(10) + "You've completed the game!")
-					//buSetButTx(ma.nextBut, DIR_S, "I'm done!", 0, 48)
-					buSetButFg(ma.nextBut, ma.stopImg)
-					
-				endif
-
-			elseif ma.state = MA_STATE_FAIL
-				
-				time = ma.levs[ma.lev].time - ma.failtime
-				coSetTextColor(ma.dialogTx, co.red[8])
-				SetTextString(ma.dialogTx, "You kept balance for" + chr(10) + str(time) + " milliseconds." + chr(10) + "But you failed, try again?")
-				//buSetButTx(ma.nextBut, DIR_S, "Try again?", 0, 48)
-				buSetButFg(ma.nextBut, ma.retryImg)
-				
-			endif
-					
 		endif
 		
+		lev = ma.lev
+				
+		if ma.state = MA_STATE_SUCC
+			
+			if lev < ma.levs.length // Still more levels?
+				
+				coSetTextColor(ma.dialogTx, co.green[8])
+				score = ma.levs[lev].time
+				SetTextString(ma.dialogTx, "You balanced and won this level!" + chr(10) + "Score: " + str(score) + chr(10) + chr(10) + "Move on to the next level...")
+				//buSetButTx(ma.nextBut, DIR_S, "Next level", 0, 48)
+				buSetButFg(ma.nextBut, ma.nextImg)
+				buSetButScale(ma.nextBut, 0.5, 0.5)
+
+			else // No more levels.
+				
+				coSetTextColor(ma.dialogTx, co.green[8])
+				score = ma.levs[lev].time
+				SetTextString(ma.dialogTx, "You balanced and won this level!" + chr(10) + "Score: " + str(score) + chr(10) + chr(10) + "You've completed the game!")
+				//buSetButTx(ma.nextBut, DIR_S, "I'm done!", 0, 48)
+				buSetButFg(ma.nextBut, ma.stopImg)
+				buSetButScale(ma.nextBut, 0.5, 0.5)
+				
+			endif
+
+		elseif ma.state = MA_STATE_FAIL
+			
+			time = ma.levs[ma.lev].time - ma.failtime
+			coSetTextColor(ma.dialogTx, co.red[8])
+			SetTextString(ma.dialogTx, "You balanced for " + str(time) + " milliseconds, " + chr(10) + "not enough to win the level." + chr(10) + chr(10) + "Try again?")
+			//buSetButTx(ma.nextBut, DIR_S, "Try again?", 0, 48)
+			buSetButFg(ma.nextBut, ma.retryImg)
+			buSetButScale(ma.nextBut, 0.5, 0.5)
+			
+		endif
+							
 		SetSpriteVisible(ma.dlog, true)
+		SetTextPosition(ma.dialogTx, co.w / 2, getspritey(ma.dlog) + GetTextTotalHeight(ma.dialogTx) / 2)
 		SetTextVisible(ma.dialogTx, true)
 		buSetButPos(ma.nextBut, co.w / 2, getspritey(ma.dlog) + GetSpriteHeight(ma.dlog) - GetSpriteHeight(ma.nextBut.bg))
 		buSetButVis(ma.nextBut, true)
