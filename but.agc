@@ -24,6 +24,7 @@ type Button
 	ts as integer
 	bs as float
 	fs as float
+	vis as integer
 	act as integer
 	actal as integer // active alpha
 	nonactal as integer // non active alpha
@@ -45,6 +46,7 @@ function buCreateBut(but ref as Button, bgImg as integer, fgImg as integer)
 	but.fg = 0
 	but.txs.length = -1
 	but.text = ""
+	but.vis = true
 	but.act = true
 	but.actal = 255
 	but.nonactal = 63
@@ -424,6 +426,8 @@ function buSetButVis(but ref as Button, vis as integer)
 	local i as integer
 	local a as integer
 	
+	but.vis = vis
+	
 	if but.act
 		a = but.actal
 	else
@@ -459,6 +463,7 @@ endfunction
 function buSetButAct(but ref as Button, act as integer)
 
 	but.act = act
+	buSetButVis(but, but.vis)
 						
 endfunction
 
@@ -469,12 +474,14 @@ function buButPressed(but ref as Button)
 
 	local ret as integer
 	
-	if but.bg
-		ret = coGetSpriteHitTest4(but.bg, in.ptrx, in.ptry, 0)
-	elseif but.fg
-		ret = coGetSpriteHitTest4(but.fg, in.ptrx, in.ptry, 0)
-	else
-		ret = false
+	ret = false
+	
+	if but.vis and but.act
+		if but.bg
+			ret = coGetSpriteHitTest4(but.bg, in.ptrx, in.ptry, 0)
+		elseif but.fg
+			ret = coGetSpriteHitTest4(but.fg, in.ptrx, in.ptry, 0)
+		endif
 	endif
 	
 endfunction ret

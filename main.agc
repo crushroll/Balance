@@ -948,7 +948,7 @@ function maEdit()
 	SetTextVisible(ma.best, false)
 
 	buSetButVis(ma.levBut, true)
-	buSetButVis(ma.timeBut, false)
+	buSetButVis(ma.timeBut, true)
 	buSetButVis(ma.scoreBut, false)	
 	buSetButVis(ma.startBut, true)
 	buUpdateButPos(ma.startBut)
@@ -1093,11 +1093,20 @@ function maDrawButtons()
 	
 	if ma.state = MA_STATE_PLAY
 		
+		for i = 0 to ma.levs[ma.lev].shps.length
+			if ma.levs[ma.lev].shps[i].sol
+				
+				inc counts[ma.levs[ma.lev].shps[i].typ]
+				inc count
+				
+			endif
+		next
+		
 		for i = 0 to ma.shps.length
 			if ma.shps[i].sol
 				
-				inc counts[ma.shps[i].typ]
-				inc count
+				dec counts[ma.shps[i].typ]
+				dec count
 				
 			endif
 		next
@@ -1186,20 +1195,6 @@ function maDrawScores()
 		coSetSpriteColor(ma.scoreBut.bg, ma.butcol)
 	endif
 	
-	if ma.state = MA_STATE_EDIT
-		
-		buSetButVis(ma.levBut, false)
-		buSetButVis(ma.timeBut, true)
-		buSetButVis(ma.scoreBut, false)
-		
-	else 
-		
-		buSetButVis(ma.levBut, true)
-		buSetButVis(ma.timeBut, true)
-		buSetButVis(ma.scoreBut, true)
-		
-	endif
-
 endfunction
 
 // ---------------------------
@@ -1224,33 +1219,47 @@ function maDrawLevel()
 				if not ma.levs[lev].shps[i].sol	
 					
 					maCreateShape(shp, ma.levs[lev].shps[i].typ, ma.levs[lev].shps[i].x, ma.levs[lev].shps[i].y)
+					shp.rot = ma.levs[lev].shps[i].rot
+					shp.sol = ma.levs[lev].shps[i].sol
 					
-				else
+					maSetRotateShape(shp)
+					//if shp.sol then coSetSpriteAlpha(shp.spr, 127)
 					
-					shp.typ = ma.levs[lev].shps[i].typ
-					shp.x = ma.levs[lev].shps[i].x
-					shp.y = ma.levs[lev].shps[i].y
-					shp.spr = 0
+					ma.shps.insert(shp)
+					
+				//else
+					
+				//	shp.typ = ma.levs[lev].shps[i].typ
+				//	shp.x = ma.levs[lev].shps[i].x
+				//	shp.y = ma.levs[lev].shps[i].y
+				//	shp.spr = 0
 					
 				endif
 				
 			elseif ma.state = MA_STATE_EDIT
 				
 				maCreateShape(shp, ma.levs[lev].shps[i].typ, ma.levs[lev].shps[i].x, ma.levs[lev].shps[i].y)
-				
-			endif
-			
-			shp.rot = ma.levs[lev].shps[i].rot
-			shp.sol = ma.levs[lev].shps[i].sol
-
-			if shp.spr
+				shp.rot = ma.levs[lev].shps[i].rot
+				shp.sol = ma.levs[lev].shps[i].sol
 				
 				maSetRotateShape(shp)
 				if shp.sol then coSetSpriteAlpha(shp.spr, 127)
 				
-			endif
+				ma.shps.insert(shp)
 				
-			ma.shps.insert(shp)
+			endif
+
+			//shp.rot = ma.levs[lev].shps[i].rot
+			//shp.sol = ma.levs[lev].shps[i].sol
+		
+			//if shp.spr
+				
+			//	maSetRotateShape(shp)
+			//	if shp.sol then coSetSpriteAlpha(shp.spr, 127)
+				
+			//endif
+				
+			//ma.shps.insert(shp)
 				
 		next
 				
@@ -1272,7 +1281,6 @@ endfunction
 //
 function maCreateShape(shp ref as Shape, typ as integer, x as integer, y as integer)
 	
-	local spr as integer
 	local count as integer
 	
 	shp.typ = typ
@@ -1280,15 +1288,13 @@ function maCreateShape(shp ref as Shape, typ as integer, x as integer, y as inte
 	shp.y = y
 	shp.rot = 0
 		
-	spr = CreateSprite(ma.typImg[typ])
+	shp.spr = CreateSprite(ma.typImg[typ])
 	//SetSpriteScale(spr, 0.5, 0.5)
-	SetSpritePositionByOffset(spr, x * ma.s, y * ma.s)
-	coSetSpriteColor(spr, ma.typCol[typ])
-	SetSpriteDepth(spr, MA_DEPTH_SHAPE)
+	SetSpritePositionByOffset(shp.spr, x * ma.s, y * ma.s)
+	coSetSpriteColor(shp.spr, ma.typCol[typ])
+	SetSpriteDepth(shp.spr, MA_DEPTH_SHAPE)
 	maAddShape(shp)
 			
-	shp.spr = spr
-
 endfunction
 
 // ---------------------------
@@ -1441,7 +1447,6 @@ function maUpdateTitle()
 			endif
 			
 			matitle()
-			//maEdit()
 			
 		else
 			
@@ -1449,7 +1454,7 @@ function maUpdateTitle()
 				
 				if buButPressed(ma.addBut)
 					
-					ma.lev = -1 // New level.
+					ma.lev = ma.levs.length + 1 // New level.
 					maEdit()
 					
 				endif
@@ -1632,7 +1637,26 @@ function maUpdateWait()
 				rect.y = (ma.oy + ma.shps[i].y) * ma.s + oy - ma.s / 2
 				rect.w = ma.s
 				rect.h = ma.s
+			
+			/*
+				log("x=" + str(x) + ", y=" + str(y) + ", rx=" + str(rect.x) + ", ry=" + str(rect.y) + ", rw=" + str(rect.w) + ", rh=" + str(rect.h))
+				
+				spr = createsprite(co.pixImg)
+				SetSpriteScale(spr, 10, 10)
+				coSetSpriteColor(spr, co.pink[3])
+				SetSpritePositionByOffset(spr, x, y)
 	
+				spr = createsprite(co.pixImg)
+				SetSpriteScale(spr, 10, 10)
+				coSetSpriteColor(spr, co.blue[3])
+				SetSpritePositionByOffset(spr, rect.x, rect.y)
+				
+				spr = createsprite(co.pixImg)
+				SetSpriteScale(spr, 10, 10)
+				coSetSpriteColor(spr, co.green[3])
+				SetSpritePositionByOffset(spr, rect.x + rect.w, rect.y + rect.h)
+			*/
+			
 				// Check.
 				if not coPointWithinRect2(x, y, rect)
 					
@@ -1649,6 +1673,7 @@ function maUpdateWait()
 						ma.phys = false
 						maShowPhysics() // Stop physics.
 						ma.state = MA_STATE_FAIL
+						exit
 						
 					endif
 								
@@ -2047,6 +2072,7 @@ function maStart()
 		
 		ma.phys = false
 		buSetButFg(ma.startBut, ma.playImg)
+		buSetButAct(ma.startBut, true)
 		buUpdateButPos(ma.startBut)
 		maShowPhysics()
 		maResetShapes()
@@ -2058,7 +2084,7 @@ function maStart()
 		
 		if ma.state = MA_STATE_PLAY
 			
-			buSetButVis(ma.startBut, false) // Need to wait.
+			buSetButAct(ma.startBut, false) // Make it not accessible.
 			ma.state = MA_STATE_WAIT
 			maDrawScores()
 			ma.starttime = GetMilliseconds()
@@ -2220,26 +2246,21 @@ function maDropShape()
 	
 	local i as integer
 	local shpdel as integer
-	local spr as integer
 	
 	if ma.selTyp and ma.selTyp < MA_SHP_S // Not deleting.
 				
 		if ma.state = MA_STATE_EDIT
+			
+			ma.selShp.sol = false
 			ma.shps.insert(ma.selShp)
-		else
-			for i = 0 to ma.shps.length
-				if ma.shps[i].typ = ma.selTyp and ma.shps[i].sol
-					
-					ma.shps[i].spr = ma.selShp.spr
-					ma.shps[i].sol = false
-					
-				endif
-			next
+			
+		elseif ma.state = MA_STATE_PLAY
+			
+			ma.selShp.sol = true
+			ma.shps.insert(ma.selShp)
 			
 		endif
-		
-		//dec ma.parts[ma.selTyp]
-		
+				
 		// Clear for next.
 		ma.selShp.typ = MA_SHP_X
 		ma.selShp.spr = 0
@@ -2249,11 +2270,9 @@ function maDropShape()
 	elseif ma.selTyp = MA_SHP_S
 		
 		if ma.state = MA_STATE_EDIT
-			
-			spr = GetSpriteHit(in.ptrX, in.ptrY)
-			
+						
 			for i = 0 to ma.shps.length
-				if spr = ma.shps[i].spr
+				if coGetSpriteHitTest4(ma.shps[i].spr, in.ptrx, in.ptry, 0)
 					
 					if ma.shps[i].sol
 						
@@ -2276,11 +2295,9 @@ function maDropShape()
 
 	else // Delete?
 
-		spr = GetSpriteHit(in.ptrX, in.ptrY)
-		
 		for i = 0 to ma.shps.length
-			
-			if spr = ma.shps[i].spr
+						
+			if coGetSpriteHitTest4(ma.shps[i].spr, in.ptrx, in.ptry, 0)
 				
 				maDeleteShape(ma.shps[i])
 				ma.shps.remove(i)
