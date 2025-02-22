@@ -235,7 +235,7 @@ function maInit()
 	coInit()
 
 	ma.selCol1 = co.blue[5]
-	ma.selCol2 = co.blue[7]
+	ma.selCol2 = co.blue[8]
 	ma.playCol1 = co.grey[5]
 	ma.playCol2 = co.grey[7]
 	ma.font = 3
