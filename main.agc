@@ -791,17 +791,18 @@ function maTitle()
 	local idx as integer
 	local ww as integer
 	local col as integer
-	
+	local n as integer
+	local ts as integer
 	
 	if ma.editAct
 		
-		col = ma.selCol1
+		col = ma.selCol2
 		coSetSpriteColor(ma.editBut.bg, ma.selCol1)
 		//buSetButTx(ma.editBut, DIR_S, "Edit", ma.font, 24)
 
 	else 
 		
-		col = ma.playCol1
+		col = ma.playCol2
 		coSetSpriteColor(ma.editBut.bg, ma.butCol)
 		//buSetButTx(ma.editBut, DIR_S, "Play", ma.font, 24)
 		
@@ -819,19 +820,30 @@ function maTitle()
 	next 
 	
 	ma.levbuts.length = -1
+	//ma.levs.length = 200
 	
-	count = ma.levs.length + 1
-	w = count / 2
-	h = w
+	count = ma.levs.length + 1	
+	h = Floor(Sqrt(count))
+   	w = floor(Ceil(count / h))
 	
 	while w * h < count
-		inc w //, count - (w * h)
+		inc h //, count - (w * h)
 	endwhile
 	
-	//xx = ma.ox + 10 - w / 2
-	//yy = ma.oy + 10 - h / 2
-	xx = ma.ox + 11 - w
-	yy = ma.oy + 11 - h
+	if (w * 2) > ma.w
+		
+		xx = ma.ox + 10 - w / 2
+		yy = ma.oy + 10 - h / 2
+		n = 1
+		
+	else 
+		
+		xx = ma.ox + 11 - w
+		yy = ma.oy + 11 - h
+		n = 2
+		
+	endif
+	
 	x = xx
 	y = yy
 	ww = w
@@ -839,40 +851,77 @@ function maTitle()
 	for i = 0 to ma.levs.length
 	
 		buCreateBut(but, ma.sButImg, 0)
-		buSetButTx(but, DIR_C, str(i + 1), ma.font, 0)
-		//sc = ma.s / GetSpriteWidth(but.bg)
-		//buSetButScale(but, sc, 0)
+		
+		if n = 1
+			
+			sc = ma.s / GetSpriteWidth(but.bg)
+			buSetButScale(but, sc, 0)
+			
+		endif
+
+		if i = 0
+			
+			buSetButTx(but, DIR_C, str(count), ma.font, 0)
+			ts = gettextsize(but.txs[0].tx)
+			
+		endif
+		
+		buSetButTx(but, DIR_C, str(i + 1), ma.font, ts)
+				
 		coSetSpriteColor(but.bg, col)
-		//buSetButPos(but, x * ma.s + ma.s / 2, y * ma.s + ma.s / 2)
-		buSetButPos(but, x * ma.s, y * ma.s)
+		
+		if n = 1
+			buSetButPos(but, x * ma.s + ma.s / 2, y * ma.s + ma.s / 2)
+		else
+			buSetButPos(but, x * ma.s, y * ma.s)
+		endif
+		
 		ma.levButs.insert(but)
 		
 		dec ww
 		
 		if ww = 0
 			
-			inc y, 2
+			inc y, n
 			x = xx
 			ww = w
+
+			if mod(x, 3) <> 0
+				
+				if ma.editAct
+					if col = ma.selCol1
+						col = ma.selCol2
+					else 
+						col = ma.selCol1
+					endif
+				else 
+					if col = ma.playCol1
+						col = ma.playCol2
+					else 
+						col = ma.playCol1
+					endif
+				endif
+								
+			endif
 			
 		else
 			 
-			inc x, 2
-			
-		endif
+			inc x, n
+					
+			if ma.editAct
+				if col = ma.selCol1
+					col = ma.selCol2
+				else 
+					col = ma.selCol1
+				endif
+			else 
+				if col = ma.playCol1
+					col = ma.playCol2
+				else 
+					col = ma.playCol1
+				endif
+			endif
 		
-		if ma.editAct
-			if col = ma.selCol1
-				col = ma.selCol2
-			else 
-				col = ma.selCol1
-			endif
-		else 
-			if col = ma.playCol1
-				col = ma.playCol2
-			else 
-				col = ma.playCol1
-			endif
 		endif
 		
 	next
