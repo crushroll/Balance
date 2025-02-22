@@ -746,7 +746,7 @@ function coInit()
 	font.italic = false
 	co.fonts.insert(font)
 		
-	font.name = "Muli"
+	font.name = "Orbitron"
 	font.weight = CO_FONT_REGULAR
 	font.italic = false
 	co.fonts.insert(font)
@@ -754,22 +754,6 @@ function coInit()
 	font.italic = false
 	co.fonts.insert(font)
 	font.weight = CO_FONT_BLACK
-	font.italic = false
-	co.fonts.insert(font)
-
-	font.name = "Oswald"
-	font.weight = CO_FONT_REGULAR
-	font.italic = false
-	co.fonts.insert(font)
-	font.weight = CO_FONT_BOLD
-	font.italic = false
-	co.fonts.insert(font)
-
-	font.name = "Solway"
-	font.weight = CO_FONT_REGULAR
-	font.italic = false
-	co.fonts.insert(font)
-	font.weight = CO_FONT_BOLD
 	font.italic = false
 	co.fonts.insert(font)
 
