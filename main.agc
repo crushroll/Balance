@@ -214,8 +214,8 @@ function maInit()
 	local sc as float
 	
 	ma.s = 64
-	ma.w = 21
-	ma.h = 21
+	ma.w = 20
+	ma.h = 20
 	ma.ox = 0
 	ma.oy = 3
 	ma.pw = (ma.w + ma.ox) * ma.s
@@ -820,16 +820,18 @@ function maTitle()
 	
 	ma.levbuts.length = -1
 	
-	count = ma.levs.length + 1 // for add
+	count = ma.levs.length + 1
 	w = count / 2
 	h = w
 	
-	if w * h < count
-		inc w, count - (w * h)
-	endif
+	while w * h < count
+		inc w //, count - (w * h)
+	endwhile
 	
-	xx = ma.ox + 10 - w / 2
-	yy = ma.oy + 10 - h / 2
+	//xx = ma.ox + 10 - w / 2
+	//yy = ma.oy + 10 - h / 2
+	xx = ma.ox + 11 - w
+	yy = ma.oy + 11 - h
 	x = xx
 	y = yy
 	ww = w
@@ -838,22 +840,24 @@ function maTitle()
 	
 		buCreateBut(but, ma.sButImg, 0)
 		buSetButTx(but, DIR_C, str(i + 1), ma.font, 0)
-		sc = ma.s / GetSpriteWidth(but.bg)
-		buSetButScale(but, sc, 0)
+		//sc = ma.s / GetSpriteWidth(but.bg)
+		//buSetButScale(but, sc, 0)
 		coSetSpriteColor(but.bg, col)
-		buSetButPos(but, x * ma.s + ma.s / 2, y * ma.s + ma.s / 2)
+		//buSetButPos(but, x * ma.s + ma.s / 2, y * ma.s + ma.s / 2)
+		buSetButPos(but, x * ma.s, y * ma.s)
 		ma.levButs.insert(but)
 		
 		dec ww
 		
 		if ww = 0
 			
-			inc y
+			inc y, 2
 			x = xx
+			ww = w
 			
 		else
 			 
-			inc x
+			inc x, 2
 			
 		endif
 		
@@ -886,17 +890,17 @@ function maTitle()
 	
 	if ma.levs.length > -1
 		
-		x = GetSpriteXByOffset(ma.levbuts[ma.levbuts.length].bg) + ma.s
-		y = GetSpriteYByOffset(ma.levbuts[ma.levbuts.length].bg)
+		xx = GetSpriteXByOffset(ma.levbuts[ma.levbuts.length].bg) + ma.s
+		yy = GetSpriteYByOffset(ma.levbuts[ma.levbuts.length].bg)
 	
 	else 
 		
-		x = xx
-		y = xx
+		xx = x * ma.s + ma.s / 2
+		yy = y * ma.s + ma.s / 2
 		
 	endif
 
-	buSetButPos(ma.addBut, x, y)
+	buSetButPos(ma.addBut, xx, yy)
 	buSetButVis(ma.addbut, ma.editAct)
 
 	for i = 0 to ma.buts.length	
@@ -2272,7 +2276,8 @@ function maDropShape()
 		if ma.state = MA_STATE_EDIT
 						
 			for i = 0 to ma.shps.length
-				if coGetSpriteHitTest4(ma.shps[i].spr, in.ptrx, in.ptry, 0)
+				//if coGetSpriteHitTest4(ma.shps[i].spr, in.ptrx, in.ptry, 0)
+				if GetSpriteHitTest(ma.shps[i].spr, in.ptrx, in.ptry)
 					
 					if ma.shps[i].sol
 						
@@ -2297,7 +2302,8 @@ function maDropShape()
 
 		for i = 0 to ma.shps.length
 						
-			if coGetSpriteHitTest4(ma.shps[i].spr, in.ptrx, in.ptry, 0)
+			//if coGetSpriteHitTest4(ma.shps[i].spr, in.ptrx, in.ptry, 0)
+			if GetSpriteHitTest(ma.shps[i].spr, in.ptrx, in.ptry)
 				
 				maDeleteShape(ma.shps[i])
 				ma.shps.remove(i)

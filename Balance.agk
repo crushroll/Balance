@@ -9,7 +9,7 @@ FILE_2=input.agc;-1
 FILE_3=main.agc;-1
 
 [files]
-FILE_NAME_0=1;main.agc;1607;0
+FILE_NAME_0=1;main.agc;997;0
 
 [watchvariables]
 watch_variable=@Version;
