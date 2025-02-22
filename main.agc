@@ -15,13 +15,19 @@
 #constant MA_STATE_WAIT = 4 // Want for the timer to determine if we have a successful physics!
 #constant MA_STATE_FAIL = 5
 #constant MA_STATE_SUCC = 6
+#constant MA_STATE_EDITTIME = 7
 
+#constant MA_DEPTH_EDITBOX = 50
 #constant MA_DEPTH_DTX = 1600
 #constant MA_DEPTH_DIALOG = 1700
 #constant MA_DEPTH_SHAPE = 1800
 #constant MA_DEPTH_SEL = 1900
 #constant MA_DEPTH_EDIT = 2000
 
+#constant MA_MIN_TIME = 1000
+#constant MA_MAX_TIME = 10000
+
+#constant MA_TITLE_HELP_MAX = 3
 #constant MA_EDIT_HELP_MAX = 5
 #constant MA_PLAY_HELP_MAX = 3
 
@@ -168,6 +174,10 @@ type Main
 	helpIdx as integer
 	helpAct as integer
 	font as integer
+	edittime as integer
+	edittitle as integer
+	best as integer // Text.
+	bestscore as integer // score value.
 	
 endtype
 
@@ -378,14 +388,16 @@ function maInit()
 	buCreateBut(ma.helpbut, ma.sButImg, ma.helpImg)
 	buSetButScale(ma.helpbut, 0.5, 0.5)
 	coSetSpriteColor(ma.helpbut.bg, ma.butCol)
-	buSetButPos(ma.helpbut, GetSpriteWidth(ma.backbut.bg) / 2 + ma.gap * 6, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
+	buSetButPos(ma.helpbut, GetSpriteWidth(ma.backbut.fg) / 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
 	buSetButVis(ma.helpbut, false)
 
 	buCreateBut(ma.editBut, ma.sButImg, ma.editImg)
 	buSetButScale(ma.editBut, 0.5, 0.5)
 	coSetSpriteColor(ma.editBut.bg, ma.butCol)
-	buSetButPos(ma.editBut, GetSpriteWidth(ma.editBut.bg) / 2 + ma.gap * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
+	//buSetButPos(ma.editBut, GetSpriteWidth(ma.editBut.bg) / 2 + ma.gap * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
+	buSetButPos(ma.editBut, GetSpriteWidth(ma.editBut.bg) * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
 	buSetButVis(ma.editBut, false)
+	
 	inc x, GetSpriteWidth(ma.editbut.bg) + ma.gap * 3
 
 	buCreateBut(ma.saveBut, ma.sButImg, ma.saveImg)
@@ -403,6 +415,10 @@ function maInit()
 	ma.title = coCreateText("Balance", ma.font, 200)
 	SetTextAlignment(ma.title, 1)
 	SetTextPosition(ma.title, x, y - GetTextTotalHeight(ma.title) / 2)
+
+	ma.best = coCreateText("", ma.font, 40)
+	SetTextAlignment(ma.best, 1)
+	SetTextPosition(ma.best, co.w - ma.gap * 14, gettexty(ma.title) + ma.gap * 5)
 
 	ma.selTyp = 0
 	ma.selShp.typ = MA_SHP_X
@@ -459,6 +475,50 @@ function maTestWelds()
 endfunction
 
 // ---------------------------
+// Load best score.
+//
+function maLoadScore()
+
+	local s as string
+	local v as integer
+	local file as string
+	
+	setfolder("/media")
+	setfolder("score")
+	
+	file = "score.txt"
+	
+	if not GetFileExists(file)
+		maSaveScore()
+	endif
+		
+	s = maLoadFile(file)
+	v = val(s)
+	ma.bestscore = v
+
+	setfolder("/media")
+
+endfunction
+
+// ---------------------------
+// Save best score.
+//
+function maSaveScore()
+	
+	local file as string
+	
+	setfolder("/media")
+	setfolder("score")
+	
+	file = "score.txt"
+
+	maSaveFile(file, str(ma.bestscore))
+	
+	setfolder("/media")
+
+endfunction
+
+// ---------------------------
 // Load levels.
 //
 function maLoadLevels()
@@ -499,6 +559,13 @@ function maLoadLevels()
 		sl.fromjson(s)
 		
 		lev.time = sl.time
+		
+		if lev.time < MA_MIN_TIME
+			lev.time = MA_MIN_TIME
+		elseif lev.time > MA_MAX_TIME
+			lev.time = MA_MAX_TIME
+		endif
+			
 		//lev.parts = sl.parts
 		
 		for i = 0 to sl.shps.length
@@ -538,6 +605,19 @@ function maLoadFile(file as string)
 endfunction s
 
 // ---------------------------
+// Save file.
+//
+function maSaveFile(file as string, s as string)
+	
+	local fh as integer
+	
+	fh = OpenToWrite(file)
+	WriteLine(fh, s)
+	CloseFile(fh)
+	
+endfunction
+
+// ---------------------------
 // Save level.
 //
 function maSaveLevel()
@@ -550,6 +630,8 @@ function maSaveLevel()
 	local fh as integer
 	local s as string
 	local lev as integer
+	
+	sl.time = ma.time
 		
 	for i = 0 to ma.shps.length
 		
@@ -568,14 +650,15 @@ function maSaveLevel()
 	
 	lev = ma.lev
 	if lev = -1 then lev = ma.levs.length + 1
-	name = str(lev) + ".txt"
 	
-	fh = OpenToWrite(name)
+	name = str(lev) + ".txt"
 	s = sl.tojson()
 	s = ReplaceString(s, chr(10), " ", -1)
 	s = ReplaceString(s, " ", "", -1)
-	WriteLine(fh, s)
-	CloseFile(fh)
+	//fh = OpenToWrite(name)
+	//WriteLine(fh, s)
+	//CloseFile(fh)
+	maSaveFile(name, s)
 	
 	setfolder("/media")
 	
@@ -706,13 +789,13 @@ function maTitle()
 		
 		col = ma.selCol1
 		coSetSpriteColor(ma.editBut.bg, ma.selCol1)
-		buSetButTx(ma.editBut, DIR_S, "Edit", ma.font, 24)
+		//buSetButTx(ma.editBut, DIR_S, "Edit", ma.font, 24)
 
 	else 
 		
 		col = ma.playCol1
 		coSetSpriteColor(ma.editBut.bg, ma.butCol)
-		buSetButTx(ma.editBut, DIR_S, "Play", ma.font, 24)
+		//buSetButTx(ma.editBut, DIR_S, "Play", ma.font, 24)
 		
 	endif
 
@@ -721,6 +804,7 @@ function maTitle()
 	maclean()
 	magrid()
 	maLoadLevels()
+	maLoadScore()
 	
 	for i = 0 to ma.levbuts.length
 		buDeleteBut(ma.levbuts[i])
@@ -827,13 +911,16 @@ function maTitle()
 	
 	buSetButVis(ma.backBut, true)
 	buSetButVis(ma.editBut, true)
-	buSetButVis(ma.helpbut, false)
+	buSetButVis(ma.helpbut, true)
 
 	for i = 0 to ma.levbuts.length	
 		buSetButVis(ma.levbuts[i], true)
 	next
 	
 	SetTextVisible(ma.title, true)
+	
+	SetTextString(ma.best, "Best" + chr(10) + "score" + chr(10) + str(ma.bestscore))
+	SetTextVisible(ma.best, true)
 	
 	ma.state = MA_STATE_TITLE
 
@@ -850,6 +937,7 @@ function maEdit()
 	local i as integer
 
 	SetTextVisible(ma.title, false)
+	SetTextVisible(ma.best, false)
 
 	buSetButVis(ma.levBut, false)
 	buSetButVis(ma.timeBut, false)
@@ -886,6 +974,55 @@ function maEdit()
 endfunction
 
 // ---------------------------
+// check edit time.
+//
+function maUpdateEditTime()
+	
+	local s as string
+	local v as integer
+	local c as integer
+	
+	if GetEditBoxVisible(ma.edittime)
+		
+		if GetEditBoxChanged(ma.edittime)
+			
+			c = GetRawLastKey()
+			
+			if c = 13 // Enter
+				
+				s = GetEditBoxText(ma.edittime)
+				v = val(s)
+								
+				if v < MA_MIN_TIME
+					v = MA_MIN_TIME
+				elseif v > MA_MAX_TIME
+					v = MA_MAX_TIME
+				endif
+				
+				ma.time = v
+				
+			endif
+			
+			SetTextVisible(ma.edittitle, false)
+			SetEditBoxVisible(ma.edittime, false)
+			
+			ma.state = MA_STATE_EDIT
+			maDrawScores()
+			
+		elseif not GetEditBoxHasFocus(ma.edittime)
+	
+			SetTextVisible(ma.edittitle, false)
+			SetEditBoxVisible(ma.edittime, false)
+			
+			ma.state = MA_STATE_EDIT
+	
+		endif
+		
+	endif
+	
+endfunction
+
+// ---------------------------
 // Play mode.
 //
 function maPlay()
@@ -893,6 +1030,8 @@ function maPlay()
 	local i as integer
 			
 	buSetButFg(ma.startBut, ma.playImg)
+	
+	SetTextVisible(ma.best, false)
 
 	buSetButVis(ma.levBut, true)
 	buSetButVis(ma.timeBut, true)
@@ -1027,7 +1166,7 @@ endfunction
 //
 function maDrawScores()
 	
-	buSetButTx(ma.levBut, DIR_C, "Level: " + str(ma.lev), -1, -1)
+	buSetButTx(ma.levBut, DIR_C, "Level: " + str(ma.lev + 1), -1, -1)
 	buSetButTx(ma.timeBut, DIR_C, "Time: " + str(ma.time), -1, -1)
 	buSetButTx(ma.scoreBut, DIR_C, "Score: " + str(ma.score), -1, -1)
 	
@@ -1099,7 +1238,7 @@ function maDrawLevel()
 			if shp.spr
 				
 				maSetRotateShape(shp)
-				if shp.sol then coSetSpriteAlpha(shp.spr, 127)
+				if shp.sol then coSetSpriteAlpha(shp.spr, 63)
 				
 			endif
 				
@@ -1109,6 +1248,10 @@ function maDrawLevel()
 				
 		maResetShapes()
 		ma.time = ma.levs[lev].time // Get time from 1.txt, need to save it.
+		
+	else
+		
+		ma.time = MA_MIN_TIME
 		ma.score = 0
 		
 	endif
@@ -1250,6 +1393,8 @@ function maUpdate()
 		maUpdateTitle()
 	elseif ma.state = MA_STATE_EDIT
 		maUpdateEdit()
+	elseif ma.state = MA_STATE_EDITTIME
+		maUpdateEditTime()
 	elseif ma.state = MA_STATE_PLAY
 		maUpdatePlay()
 	elseif ma.state = MA_STATE_WAIT
@@ -1274,6 +1419,10 @@ function maUpdateTitle()
 		if buButPressed(ma.backBut)
 			
 			end
+
+		elseif buButPressed(ma.helpBut)
+			
+			mahelp(true, 0)
 			
 		elseif buButPressed(ma.editBut)
 			
@@ -1339,6 +1488,8 @@ function maUpdateEdit()
 			maHelp(true, 0)
 		elseif buButPressed(ma.startBut)
 			maStart()
+		elseif buButPressed(ma.timeBut)
+			maEditTime()
 		elseif buButPressed(ma.saveBut)
 			maSaveLevel()
 		elseif maSelectShape() = -1
@@ -1348,6 +1499,35 @@ function maUpdateEdit()
 		maHoverCell()
 	endif
 
+endfunction
+
+// ---------------------------
+// Edit time.
+//
+function maEditTime()
+	
+	if not ma.editTime
+		
+		ma.editTime = CreateEditBox()
+		SetEditBoxSize(ma.editTime, GetSpriteWidth(ma.timeBut.bg) - ma.s * 2, GetSpriteHeight(ma.timebut.bg))
+		SetEditBoxPosition(ma.editTime, getspritex(ma.timeBut.bg) + ma.s * 2, getspritey(ma.timeBut.bg) + ma.s - ma.gap * 2)
+		SetEditBoxFont(ma.editTime, 0)
+		SetEditBoxTextSize(ma.editTime, 48)
+		SetEditBoxInputType(ma.edittime, 1)
+		SetEditBoxDepth(ma.editTime, MA_DEPTH_EDITBOX)
+		
+		ma.edittitle = coCreateText("Edit time" + chr(10) + "Esc or Enter", ma.font, 24)
+		SetTextAlignment(ma.edittitle, 2)
+		SetTextPosition(ma.edittitle, geteditboxx(ma.edittime) - ma.gap, geteditboxy(ma.edittime) - ma.gap)
+		
+	endif
+
+	ma.state = MA_STATE_EDITTIME
+	SetEditBoxText(ma.editTime, str(ma.levs[ma.lev].time))
+	SetEditBoxVisible(ma.edittime, true)
+	SetEditBoxFocus(ma.editTime, true)
+	SetTextVisible(ma.edittitle, true)
+	
 endfunction
 
 // ---------------------------
@@ -1477,6 +1657,13 @@ function maUpdateWait()
 			ma.state = MA_STATE_SUCC
 			ma.score = ma.score + ma.levs[ma.lev].time
 			
+			if ma.score > ma.bestscore
+				
+				ma.bestscore = ma.score
+				maSaveScore()
+				
+			endif
+			
 		endif
 		
 	endif
@@ -1524,7 +1711,9 @@ function maHelp(vis as integer, delta as integer)
 	y = 5
 	m = 0
 	
-	if ma.state = MA_STATE_EDIT
+	if ma.state = MA_STATE_TITLE
+		m = MA_TITLE_HELP_MAX
+	elseif ma.state = MA_STATE_EDIT
 		m = MA_EDIT_HELP_MAX
 	elseif ma.state = MA_STATE_PLAY
 		m = MA_PLAY_HELP_MAX
@@ -1537,8 +1726,14 @@ function maHelp(vis as integer, delta as integer)
 	else
 		 
 		inc ma.helpidx, delta
-		
-		if ma.state = MA_STATE_EDIT
+
+		if ma.state = MA_STATE_TITLE
+			if ma.helpidx > m
+				ma.helpidx = 0
+			elseif ma.helpidx < 0
+				ma.helpIdx = m - 1
+			endif	
+		elseif ma.state = MA_STATE_EDIT
 			if ma.helpidx > m
 				ma.helpidx = 0
 			elseif ma.helpidx < 0
@@ -1611,8 +1806,38 @@ function maHelp(vis as integer, delta as integer)
 	endif
 		
 	if vis
-		
-		if ma.state = MA_STATE_EDIT
+	
+		if ma.state = MA_STATE_TITLE
+			
+			s = str(ma.helpIdx + 1) + "/" + str(m + 1) + chr(10)
+			
+			if ma.helpIdx = 0
+				
+				x = 1
+				y = 1
+				s = s + "When the pencil button is grey, you are in play mode." + chr(10) + "Press a grey level number below to play."
+			
+			elseif ma.helpIdx = 1
+				
+				x = 1
+				y = 1
+				s = s + "Press the pencil button to toggle between play and edit modes."
+				 							
+			elseif ma.helpIdx = 2
+				
+				x = 1
+				y = 1
+				s = s + "When the pencil button is blue, you are in edit mode." + chr(10) + "Press a blue level number below to edit the level."
+
+			elseif ma.helpIdx = 3
+
+				x = 1
+				y = 1
+				s = s + "In edit mode, press the Add button to create a new level." + chr(10) + "Press <- to exit the game."
+							
+			endif
+	
+		elseif ma.state = MA_STATE_EDIT
 			
 			s = str(ma.helpIdx + 1) + "/" + str(m + 1) + chr(10)
 			
@@ -1712,17 +1937,17 @@ function maDialog(vis as integer)
 		if not ma.dlog
 			
 			ma.dlog = createsprite(co.pixImg)
-			SetSpriteScale(ma.dlog, ma.s * 11, ma.s * 7)
+			SetSpriteScale(ma.dlog, ma.s * 11, ma.s * 5)
 			coSetSpriteColor(ma.dlog, co.grey[4])
 			SetSpritePosition(ma.dlog, (ma.ox + 5) * ma.s, (ma.oy + 7) * ma.s)
 			SetSpriteDepth(ma.dlog, MA_DEPTH_DIALOG)
 			
-			ma.dialogTx = coCreateText("", ma.font, 48)
+			ma.dialogTx = coCreateText("", ma.font, 32)
 			SetTextAlignment(ma.dialogTx, 1)
 			SetTextDepth(ma.dialogTx, MA_DEPTH_DTX)
 		
 			buCreateBut(ma.nextbut, ma.sbutImg, 0)
-			coSetSpriteColor(ma.nextbut.bg, co.blue[8])
+			coSetSpriteColor(ma.nextbut.bg, ma.selCol1)
 			buSetButScale(ma.nextBut, 0.5, 0.5)
 	
 		endif
@@ -1730,22 +1955,20 @@ function maDialog(vis as integer)
 		lev = ma.lev
 				
 		if ma.state = MA_STATE_SUCC
-			
+						
 			if lev < ma.levs.length // Still more levels?
 				
-				coSetTextColor(ma.dialogTx, co.green[8])
+				coSetTextColor(ma.dialogTx, co.green[7])
 				score = ma.levs[lev].time
-				SetTextString(ma.dialogTx, "You balanced and won this level!" + chr(10) + "Score: " + str(score) + chr(10) + chr(10) + "Move on to the next level...")
-				//buSetButTx(ma.nextBut, DIR_S, "Next level", 0, 48)
+				SetTextString(ma.dialogTx, "You balanced and won the level!" + chr(10) + "Points received: " + str(score) + chr(10) + chr(10) + "Move on to the next level...")
 				buSetButFg(ma.nextBut, ma.nextImg)
 				buSetButScale(ma.nextBut, 0.5, 0.5)
 
 			else // No more levels.
 				
-				coSetTextColor(ma.dialogTx, co.green[8])
+				coSetTextColor(ma.dialogTx, co.green[7])
 				score = ma.levs[lev].time
-				SetTextString(ma.dialogTx, "You balanced and won this level!" + chr(10) + "Score: " + str(score) + chr(10) + chr(10) + "You've completed the game!")
-				//buSetButTx(ma.nextBut, DIR_S, "I'm done!", 0, 48)
+				SetTextString(ma.dialogTx, "You balanced and won this level!" + chr(10) + "Points received: " + str(score) + chr(10) + chr(10) + "You've completed the game!")
 				buSetButFg(ma.nextBut, ma.stopImg)
 				buSetButScale(ma.nextBut, 0.5, 0.5)
 				
@@ -1754,9 +1977,8 @@ function maDialog(vis as integer)
 		elseif ma.state = MA_STATE_FAIL
 			
 			time = ma.levs[ma.lev].time - ma.failtime
-			coSetTextColor(ma.dialogTx, co.red[8])
-			SetTextString(ma.dialogTx, "You balanced for " + str(time) + " milliseconds, " + chr(10) + "not enough to win the level." + chr(10) + chr(10) + "Try again?")
-			//buSetButTx(ma.nextBut, DIR_S, "Try again?", 0, 48)
+			coSetTextColor(ma.dialogTx, co.red[7])
+			SetTextString(ma.dialogTx, "You balanced for " + str(time) + " milliseconds, " + chr(10) + " not enough to win the level." + chr(10) + chr(10) + "Try again?")
 			buSetButFg(ma.nextBut, ma.retryImg)
 			buSetButScale(ma.nextBut, 0.5, 0.5)
 			
@@ -1961,8 +2183,6 @@ function maRotateShape(shp ref as Shape)
 	endif
 	
 	maSetRotateShape(shp)
-	//maAddShape(shp)
-	//SetSpriteShape(shp.spr, ma.shape)
 		
 endfunction
 
@@ -2034,7 +2254,7 @@ function maDropShape()
 						
 					else 
 						
-						coSetSpriteAlpha(ma.shps[i].spr, 127)
+						coSetSpriteAlpha(ma.shps[i].spr, 63)
 						ma.shps[i].sol = true
 						
 					endif
