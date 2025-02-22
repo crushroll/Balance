@@ -22,6 +22,9 @@
 #constant MA_DEPTH_SEL = 1900
 #constant MA_DEPTH_EDIT = 2000
 
+#constant MA_EDIT_HELP_MAX = 2
+#constant MA_PLAY_HELP_MAX = 2
+
 #constant MA_SHP_X = 0
 #constant MA_SHP_I = 1
 #constant MA_SHP_J = 2
@@ -112,6 +115,8 @@ type Main
 	helpImg as integer
 	saveImg as integer
 	addImg as integer
+	prevImg as integer
+	cancelImg as integer
 	buts as Button[]
 	sels as Shape[] // The selector shapes.
 	selTyp as integer // The selected typ.
@@ -135,6 +140,7 @@ type Main
 	scoreBut as Button
 	backBut as Button
 	editBut as Button
+	helpBut as Button
 	addBut as Button
 	butCol as integer
 	selButCol as integer
@@ -153,6 +159,14 @@ type Main
 	editAct as integer
 	playCol1 as integer
 	playCol2 as integer
+	help as integer // dialogr
+	helpTx as integer
+	helpPrevBut as Button
+	helpNextBut as Button
+	helpQuitBut as Button
+	gap as float
+	helpIdx as integer
+	helpAct as integer
 	
 endtype
 
@@ -185,7 +199,6 @@ function maInit()
 	local w as float
 	local h as float
 	local but as Button
-	local gap as float
 	local sc as float
 	
 	ma.s = 64
@@ -197,6 +210,8 @@ function maInit()
 	ma.ph = (ma.h + ma.oy) * ma.s
 	ma.shape = 3
 	ma.editAct = false
+	ma.gap = 8
+	ma.helpAct = false
 	
 	setVirtualResolution(ma.pw, ma.ph)
 	h = GetDeviceHeight()
@@ -249,6 +264,8 @@ function maInit()
 	ma.helpImg = loadimage("gfx/help.png")
 	ma.saveImg = loadimage("gfx/save.png")
 	ma.addImg = loadimage("gfx/add.png")
+	ma.prevImg = loadimage("gfx/prev.png")
+	ma.cancelImg = loadimage("gfx/cancel.png")
 	
 	ma.sButImg = loadimage("gfx/sbut.png")
 	ma.mbutImg = loadimage("gfx/mbut.png")
@@ -283,7 +300,6 @@ function maInit()
 	maGrid()
 
 	y = (ma.s * ma.oy) / 2
-	gap = 8
 	
 	ma.selY = y + ma.s
 	ma.butCol = makecolor(127, 127, 127)
@@ -292,7 +308,7 @@ function maInit()
 	for i = 0 to ma.sels.length
 				
 		buCreateBut(but, ma.sButImg, 0)
-		if i = 0 then x = GetSpriteWidth(but.bg) / 2 + gap * 22
+		if i = 0 then x = GetSpriteWidth(but.bg) / 2 + ma.gap * 22
 		but.fg = ma.sels[i].spr
 		buSetButScale(but, 0.7, 0.7)
 		
@@ -313,11 +329,11 @@ function maInit()
 		buSetButPos(but, x, y)
 		ma.buts.insert(but)
 
-		inc x, GetSpriteWidth(but.bg) + gap
+		inc x, GetSpriteWidth(but.bg) + ma.gap
 		
 	next
 	
-	x = co.w - gap * 11
+	x = co.w - ma.gap * 11
 	y = (ma.s * ma.oy) / 2
 	yy = y
 	buCreateBut(ma.startBut, ma.sButImg, ma.playImg)
@@ -329,12 +345,12 @@ function maInit()
 	sc = 0.3
 	buCreateBut(ma.levBut, ma.xlButImg, 0)
 	buSetButScale(ma.levBut, sc, sc)
-	x = x - GetSpriteWidth(ma.startBut.bg) / 2 - GetSpriteWidth(ma.levBut.bg) / 2 - gap * 3
+	x = x - GetSpriteWidth(ma.startBut.bg) / 2 - GetSpriteWidth(ma.levBut.bg) / 2 - ma.gap * 3
 	y = y - GetSpriteHeight(ma.startBut.bg) / 2 + GetSpriteHeight(ma.levBut.bg) / 2
 	coSetSpriteColor(ma.levBut.bg, ma.butCol)
 	buSetButTx(ma.levBut, DIR_C, "Level: 1", 0, 40)
 	buSetButPos(ma.levBut, x, y)
-	inc y, GetSpriteHeight(ma.levBut.bg) + gap
+	inc y, GetSpriteHeight(ma.levBut.bg) + ma.gap
 	buSetButVis(ma.levBut, false)
 
 	buCreateBut(ma.timeBut, ma.xlButImg, 0)
@@ -342,7 +358,7 @@ function maInit()
 	coSetSpriteColor(ma.timeBut.bg, ma.butCol)
 	buSetButTx(ma.timeBut, DIR_C, "Time: 0", 0, 40)
 	buSetButPos(ma.timeBut, x, y)
-	inc y, GetSpriteHeight(ma.levBut.bg) + gap
+	inc y, GetSpriteHeight(ma.levBut.bg) + ma.gap
 	buSetButVis(ma.timeBut, false)
 
 	buCreateBut(ma.scoreBut, ma.xlButImg, 0)
@@ -350,7 +366,7 @@ function maInit()
 	coSetSpriteColor(ma.scoreBut.bg, ma.butCol)
 	buSetButTx(ma.scoreBut, DIR_C, "Score: 0", 0, 40)
 	buSetButPos(ma.scoreBut, x, y)
-	inc y, GetSpriteHeight(ma.levBut.bg) + gap
+	inc y, GetSpriteHeight(ma.levBut.bg) + ma.gap
 	buSetButVis(ma.scoreBut, false)
 
 	buCreateBut(ma.backBut, 0, ma.backImg)
@@ -360,15 +376,21 @@ function maInit()
 	buCreateBut(ma.saveBut, ma.sButImg, ma.saveImg)
 	buSetButScale(ma.saveBut, 0.5, 0.5)
 	coSetSpriteColor(ma.saveBut.bg, ma.butCol)
-	buSetButPos(ma.saveBut, GetSpriteWidth(ma.saveBut.bg) / 2 + gap * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + gap * 5)
+	buSetButPos(ma.saveBut, GetSpriteWidth(ma.saveBut.bg) / 2 + ma.gap * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
 	buSetButVis(ma.saveBut, false)
 
 	buCreateBut(ma.editBut, ma.sButImg, ma.editImg)
 	buSetButScale(ma.editBut, 0.5, 0.5)
 	coSetSpriteColor(ma.editBut.bg, ma.butCol)
-	buSetButPos(ma.editBut, GetSpriteWidth(ma.editBut.bg) / 2 + gap * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + gap * 5)
+	buSetButPos(ma.editBut, GetSpriteWidth(ma.editBut.bg) / 2 + ma.gap * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
 	buSetButVis(ma.editBut, false)
-	inc y, h + gap * 3
+	inc x, GetSpriteWidth(ma.editbut.bg) + ma.gap * 3
+
+	buCreateBut(ma.helpbut, ma.sButImg, ma.helpImg)
+	buSetButScale(ma.helpbut, 0.5, 0.5)
+	coSetSpriteColor(ma.helpbut.bg, ma.butCol)
+	buSetButPos(ma.helpbut, GetSpriteWidth(ma.helpbut.bg) / 2 + ma.gap * 2, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
+	buSetButVis(ma.helpbut, false)
 
 	// Main menu.
 		
@@ -803,6 +825,7 @@ function maTitle()
 	
 	buSetButVis(ma.backBut, true)
 	buSetButVis(ma.editBut, true)
+	buSetButVis(ma.helpbut, false)
 
 	for i = 0 to ma.levbuts.length	
 		buSetButVis(ma.levbuts[i], true)
@@ -810,10 +833,11 @@ function maTitle()
 	
 	SetTextVisible(ma.title, true)
 	
-	maDialog(false)
-	
 	ma.state = MA_STATE_TITLE
 
+	maDialog(false)
+	maHelp(false, 0)
+	
 endfunction
 
 // ---------------------------
@@ -822,6 +846,8 @@ endfunction
 function maEdit()
 	
 	local i as integer
+
+	SetTextVisible(ma.title, false)
 
 	buSetButVis(ma.levBut, false)
 	buSetButVis(ma.timeBut, false)
@@ -833,6 +859,9 @@ function maEdit()
 	buSetButVis(ma.saveBut, true)
 	buSetButVis(ma.editBut, false)
 	buSetButVis(ma.addBut, false)
+	buSetButVis(ma.helpbut, true)
+	coSetSpriteColor(ma.helpbut.bg, ma.butCol)
+	buSetButPos(ma.helpbut, GetSpriteXByOffset(ma.backbut.bg) + ma.gap * 8 + getspritewidth(ma.helpbut.bg), getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
 
 	SetSpriteVisible(ma.base, true)
 	SetSpritePhysicsOn(ma.base, 1)
@@ -844,11 +873,10 @@ function maEdit()
 	for i = 0 to ma.levbuts.length	
 		buSetButVis(ma.levbuts[i], false)
 	next
-
-	SetTextVisible(ma.title, false)
 	
 	ma.state = MA_STATE_EDIT
 
+	maHelp(false, 0)
 	maDialog(false)
 	maDrawButtons()
 	maDrawLevel()
@@ -874,6 +902,12 @@ function maPlay()
 	buSetButVis(ma.saveBut, false)
 	buSetButVis(ma.editBut, false)
 	buSetButVis(ma.addBut, false)
+	buSetButVis(ma.helpbut, true)
+
+	buSetButVis(ma.backBut, true)
+	buSetButVis(ma.editBut, false)
+	coSetSpriteColor(ma.helpbut.bg, ma.butCol)
+	buSetButPos(ma.helpbut, GetSpriteXByOffset(ma.backbut.bg) + ma.gap * 6, getspritey(ma.backBut.fg) + GetSpriteHeight(ma.backBut.fg) + ma.gap * 5)
 
 	SetSpriteVisible(ma.base, true)
 	SetSpritePhysicsOn(ma.base, 1)
@@ -881,10 +915,7 @@ function maPlay()
 	for i = 0 to ma.cells.length
 		SetSpriteVisible(ma.cells[i].spr, true)
 	next
-	
-	buSetButVis(ma.backBut, true)
-	buSetButVis(ma.editBut, false)
-	
+		
 	for i = 0 to ma.levbuts.length	
 		buSetButVis(ma.levbuts[i], false)
 	next
@@ -894,6 +925,7 @@ function maPlay()
 	ma.phys = false
 	ma.state = MA_STATE_PLAY
 
+	maHelp(false, 0)
 	maDialog(false)
 	maDrawLevel()
 	maDrawScores()
@@ -1212,7 +1244,9 @@ endfunction
 //
 function maUpdate()
 	
-	if ma.state = MA_STATE_TITLE
+	if ma.helpact
+		maUpdateHelp()
+	elseif ma.state = MA_STATE_TITLE
 		maUpdateTitle()
 	elseif ma.state = MA_STATE_EDIT
 		maUpdateEdit()
@@ -1301,6 +1335,8 @@ function maUpdateEdit()
 	if in.ptrPressed	
 		if buButPressed(ma.backBut)
 			maTitle()
+		elseif buButPressed(ma.helpBut)
+			maHelp(true, 0)
 		elseif buButPressed(ma.startBut)
 			maStart()
 		elseif buButPressed(ma.saveBut)
@@ -1324,6 +1360,8 @@ function maUpdatePlay()
 	if in.ptrPressed	
 		if buButPressed(ma.backBut)
 			maTitle()
+		elseif buButPressed(ma.helpBut)
+			maHelp(true, 0)
 		elseif buButPressed(ma.startBut)
 			maStart()
 		elseif maSelectShape() = -1
@@ -1333,6 +1371,25 @@ function maUpdatePlay()
 		maHoverCell()
 	endif
 
+endfunction
+
+// ---------------------------
+// Update help state.
+//
+function maUpdateHelp()
+	
+	inUpdate()
+	
+	if in.ptrPressed	
+		if buButPressed(ma.helpprevBut)
+			maHelp(true, -1)
+		elseif buButPressed(ma.helpnextBut)
+			maHelp(true, 1)
+		elseif buButPressed(ma.helpquitBut)
+			maHelp(false, 0)
+		endif
+	endif
+	
 endfunction
 
 // ---------------------------
@@ -1452,18 +1509,131 @@ function maUpdateSuccFail()
 endfunction
 
 // ---------------------------
+// Show the help
+// vis shows/activates or not.
+// Start restarted help.
+//
+function maHelp(vis as integer, delta as integer)
+	
+	local r as integer
+	
+	if vis
+		
+		ma.helpact = true
+		
+		if delta = 0
+			
+			ma.helpidx = 0
+			
+		else
+			 
+			inc ma.helpidx, delta
+			
+			if ma.state = MA_STATE_EDIT
+				if ma.helpidx > MA_EDIT_HELP_MAX
+					ma.helpidx = 0
+				elseif ma.helpidx < 0
+					ma.helpIdx = MA_EDIT_HELP_MAX
+				endif
+			elseif ma.state = MA_STATE_PLAY
+				if ma.helpidx > MA_PLAY_HELP_MAX
+					ma.helpidx = 0
+				elseif ma.helpidx < 0
+					ma.helpIdx = MA_PLAY_HELP_MAX
+				endif			
+			endif
+			
+		endif
+		
+		if not ma.help
+			
+			ma.help = createsprite(co.pixImg)
+			SetSpriteScale(ma.help, ma.s * 6, ma.s * 4)
+			coSetSpriteColor(ma.help, co.grey[4])
+			coSetSpriteColor(ma.help, co.yellow[7])
+			SetSpriteDepth(ma.help, MA_DEPTH_DIALOG)
+			
+			ma.helpTx = coCreateText("TEST HELP, This is a test of the warning.", 0, 32)
+			SetTextAlignment(ma.helpTx, 1)
+			SetTextDepth(ma.helpTx, MA_DEPTH_DTX)
+			SetTextMaxWidth(ma.helpTx, GetSpriteWidth(ma.help))
+			coSetTextColor(ma.helptx, co.grey[8])
+		
+			buCreateBut(ma.helpprevbut, ma.sbutImg, ma.previmg)
+			coSetSpriteColor(ma.helpprevbut.bg, co.yellow[9])
+			buSetButScale(ma.helpprevBut, 0.5, 0.5)
+
+			buCreateBut(ma.helpnextbut, ma.sbutImg, ma.nextimg)
+			coSetSpriteColor(ma.helpnextbut.bg, co.yellow[9])
+			buSetButScale(ma.helpnextBut, 0.5, 0.5)
+
+			buCreateBut(ma.helpquitbut, ma.sbutImg, ma.cancelimg)
+			coSetSpriteColor(ma.helpquitbut.bg, co.yellow[9])
+			buSetButScale(ma.helpquitBut, 0.5, 0.5)
+			
+		endif
+		
+	else 
+		
+		ma.helpact = false
+	
+	endif
+	
+	if vis
+		
+		SetSpriteVisible(ma.help, true)
+		SetTextVisible(ma.helpTx, true)
+		buSetButVis(ma.helpprevbut, true)
+		buSetButVis(ma.helpnextbut, true)
+		buSetButVis(ma.helpquitbut, true)
+		
+	else 
+
+		SetSpriteVisible(ma.help, false)
+		SetTextVisible(ma.helpTx, false)
+		buSetButVis(ma.helpprevbut, false)
+		buSetButVis(ma.helpnextbut, false)
+		buSetButVis(ma.helpquitbut, false)
+		
+	endif
+		
+	if vis
+		
+		if ma.state = MA_STATE_EDIT
+			
+			if ma.helpidx = 0
+				
+				SetSpritePosition(ma.help, (ma.ox + 3) * ma.s, (ma.oy + 3) * ma.s)
+				SetTextString(ma.helptx, "Hello")
+			
+			elseif ma.helpidx = 1
+				
+				SetSpritePosition(ma.help, (ma.ox + 3) * ma.s, (ma.oy + 3) * ma.s)
+				SetTextString(ma.helptx, "World")
+			
+			endif
+			
+		endif
+			
+		SetTextPosition(ma.helptx, GetSpriteXByOffset(ma.help), getspritey(ma.help))
+		buSetButPos(ma.helpnextbut, GetSpriteXByOffset(ma.help), getspritey(ma.help) + GetSpriteHeight(ma.help) - GetSpriteHeight(ma.helpnextbut.bg) / 2 - ma.gap)
+		buSetButPos(ma.helpprevbut, GetSpriteXByOffset(ma.helpnextbut.bg) - GetSpriteWidth(ma.helpnextbut.bg) - ma.gap * 2, GetSpriteYByOffset(ma.helpnextbut.bg)) 
+		buSetButPos(ma.helpquitbut, GetSpriteXByOffset(ma.helpnextbut.bg) + GetSpriteWidth(ma.helpnextbut.bg) + ma.gap * 2, GetSpriteYByOffset(ma.helpnextbut.bg)) 
+											
+	endif
+	
+endfunction
+
+// ---------------------------
 // Show the dialog
 //
 function maDialog(vis as integer)
 	
 	local r as integer
-	local gap as float
 	local score as integer
 	local time as integer
 	local lev as integer
-	
-	gap = 8
-	
+		
 	if vis
 		
 		if not ma.dlog
