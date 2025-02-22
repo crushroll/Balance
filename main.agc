@@ -181,6 +181,7 @@ type Main
 	best as integer // Text.
 	bestscore as integer // score value.
 	dirsfont as integer
+	subtitle as integer
 	
 endtype
 
@@ -216,8 +217,8 @@ function maInit()
 	local sc as float
 	
 	ma.s = 64
-	ma.w = 21
-	ma.h = 21
+	ma.w = 20
+	ma.h = 20
 	ma.ox = 0
 	ma.oy = 3
 	ma.pw = (ma.w + ma.ox) * ma.s
@@ -324,7 +325,7 @@ function maInit()
 	for i = 0 to ma.sels.length
 				
 		buCreateBut(but, ma.sButImg, 0)
-		if i = 0 then x = GetSpriteWidth(but.bg) / 2 + ma.gap * 22
+		if i = 0 then x = GetSpriteWidth(but.bg) / 2 + ma.gap * 26
 		but.fg = ma.sels[i].spr
 		buSetButScale(but, 0.7, 0.7)
 		
@@ -418,16 +419,20 @@ function maInit()
 	// Main menu.
 		
 	x = co.w / 2
-	y = yy
+	y = 0
 	h = GetSpriteWidth(ma.startBut.bg)
 
-	ma.title = coCreateText("Balance", ma.font, 200)
+	ma.subtitle = coCreateText("Nothing can go wrong ... if you maintain your", ma.font, 40)
+	SetTextAlignment(ma.subtitle, 1)
+	SetTextPosition(ma.subtitle, x, GetTextTotalHeight(ma.subtitle) / 2 - ma.gap * 1)
+
+	ma.title = coCreateText("Balance", ma.font, 160)
 	SetTextAlignment(ma.title, 1)
-	SetTextPosition(ma.title, x, y - GetTextTotalHeight(ma.title) / 2)
+	SetTextPosition(ma.title, x, GetTextTotalHeight(ma.title) / 2 - ma.gap * 5)
 
 	ma.best = coCreateText("", ma.font, 40)
-	SetTextAlignment(ma.best, 1)
-	SetTextPosition(ma.best, co.w - ma.gap * 14, gettexty(ma.title) + ma.gap * 5)
+	SetTextAlignment(ma.best, 2)
+	SetTextPosition(ma.best, co.w - ma.gap * 3, gettexty(ma.title) + ma.gap * 2)
 
 	ma.selTyp = 0
 	ma.selShp.typ = MA_SHP_X
@@ -987,6 +992,7 @@ function maTitle()
 		buSetButVis(ma.levbuts[i], true)
 	next
 	
+	SetTextVisible(ma.subtitle, true)
 	SetTextVisible(ma.title, true)
 	
 	SetTextString(ma.best, "Best" + chr(10) + "score" + chr(10) + str(ma.bestscore))
@@ -1006,6 +1012,7 @@ function maEdit()
 	
 	local i as integer
 
+	SetTextVisible(ma.subtitle, false)
 	SetTextVisible(ma.title, false)
 	SetTextVisible(ma.best, false)
 
@@ -1101,7 +1108,9 @@ function maPlay()
 	local i as integer
 			
 	buSetButFg(ma.startBut, ma.playImg)
-	
+
+	SetTextVisible(ma.subtitle, false)
+	SetTextVisible(ma.title, false)		
 	SetTextVisible(ma.best, false)
 
 	buSetButVis(ma.levBut, true)
@@ -1133,8 +1142,6 @@ function maPlay()
 	for i = 0 to ma.levbuts.length	
 		buSetButVis(ma.levbuts[i], false)
 	next
-
-	SetTextVisible(ma.title, false)	
 
 	ma.phys = false
 	ma.state = MA_STATE_PLAY
