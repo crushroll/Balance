@@ -40,7 +40,7 @@
 #constant MA_SHP_T = 6
 #constant MA_SHP_Z = 7
 
-#constant MA_BUILTIN_LEVELS = 16
+#constant MA_BUILTIN_LEVELS = 0
 
 type Cell
 	
@@ -594,8 +594,13 @@ function maLoadFile(file as string)
 	local s as string
 	
 	fh = OpenToRead(file)
-	s = ReadLine(fh)
-	closefile(fh)
+	
+	if fh
+		
+		s = ReadLine(fh)
+		closefile(fh)
+		
+	endif
 	
 endfunction s
 
