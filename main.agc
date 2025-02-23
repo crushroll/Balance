@@ -325,7 +325,7 @@ function maInit()
 	for i = 0 to ma.sels.length
 				
 		buCreateBut(but, ma.sButImg, 0)
-		if i = 0 then x = GetSpriteWidth(but.bg) / 2 + ma.gap * 26
+		if i = 0 then x = GetSpriteWidth(but.bg) / 2 + ma.gap * 26 
 		but.fg = ma.sels[i].spr
 		buSetButScale(but, 0.7, 0.7)
 		
@@ -806,19 +806,14 @@ function maTitle()
 	local col as integer
 	local n as integer
 	local ts as integer
+	local ox as integer
+	local oy as integer
+	local cy as integer
 	
 	if ma.editAct
-		
-		col = ma.selCol2
 		coSetSpriteColor(ma.editBut.bg, ma.selCol1)
-		//buSetButTx(ma.editBut, DIR_S, "Edit", ma.font, 24)
-
 	else 
-		
-		col = ma.playCol2
 		coSetSpriteColor(ma.editBut.bg, ma.butCol)
-		//buSetButTx(ma.editBut, DIR_S, "Play", ma.font, 24)
-		
 	endif
 
 	buUpdateButPos(ma.editBut)
@@ -836,8 +831,8 @@ function maTitle()
 	//ma.levs.length = 200
 	
 	count = ma.levs.length + 1	
-	h = Floor(Sqrt(count))
-   	w = floor(Ceil(count / h))
+	w = Sqrt(count)
+	h = w
 	
 	while w * h < count
 		inc h //, count - (w * h)
@@ -845,14 +840,18 @@ function maTitle()
 	
 	if (w * 2) > ma.w
 		
-		xx = ma.ox + 10 - w / 2
-		yy = ma.oy + 10 - h / 2
+		ox = ma.ox + 10
+		oy = ma.oy + 10
+		xx = ox - w / 2
+		yy = oy - h / 2
 		n = 1
 		
 	else 
 		
-		xx = ma.ox + 11 - w
-		yy = ma.oy + 11 - h
+		ox = ma.ox + 11
+		oy = ma.oy + 11
+		xx = ox - w
+		yy = oy - h
 		n = 2
 		
 	endif
@@ -860,9 +859,18 @@ function maTitle()
 	x = xx
 	y = yy
 	ww = w
+	cy = 0
 
 	for i = 0 to ma.levs.length
 	
+		if x = xx // Start of each line.
+			if mod(cy, 2) = 0 // Alternate starting color.
+				col = maFlipCol(2, 0)
+			else 
+				col = maFlipCol(1, 0)
+			endif
+		endif
+
 		buCreateBut(but, ma.sButImg, 0)
 		
 		if n = 1
@@ -897,46 +905,19 @@ function maTitle()
 			
 			inc y, n
 			x = xx
-			ww = w
-
-			if mod(x, 3) <> 0
-				
-				if ma.editAct
-					if col = ma.selCol1
-						col = ma.selCol2
-					else 
-						col = ma.selCol1
-					endif
-				else 
-					if col = ma.playCol1
-						col = ma.playCol2
-					else 
-						col = ma.playCol1
-					endif
-				endif
-								
-			endif
 			
+			inc cy
+			
+			ww = w
+																							
 		else
 			 
-			inc x, n
-					
-			if ma.editAct
-				if col = ma.selCol1
-					col = ma.selCol2
-				else 
-					col = ma.selCol1
-				endif
-			else 
-				if col = ma.playCol1
-					col = ma.playCol2
-				else 
-					col = ma.playCol1
-				endif
-			endif
-		
+			inc x, n		
+				
+			col = maFlipCol(0, col)
+												
 		endif
-		
+								
 	next
 	
 	if not ma.addbut.bg
@@ -1004,6 +985,43 @@ function maTitle()
 	maHelp(false, 0)
 	
 endfunction
+
+// ---------------------------
+// Flip the color.
+//
+function maFlipCol(nbr as integer, col as integer)
+	
+	if nbr = 0
+		if ma.editAct
+			if col = ma.selCol1
+				col = ma.selCol2
+			else 
+				col = ma.selCol1
+			endif
+		else 
+			if col = ma.playCol1
+				col = ma.playCol2
+			else 
+				col = ma.playCol1
+			endif
+		endif
+	else
+		if ma.editAct
+			if nbr = 1
+				col = ma.selCol1
+			else 
+				col = ma.selCol2
+			endif
+		else 
+			if nbr = 1
+				col = ma.playCol1
+			else 
+				col = ma.playCol2
+			endif
+		endif
+	endif
+		
+endfunction col
 
 // ---------------------------
 // Make edit sprites visible.
@@ -2071,7 +2089,7 @@ function maDialog(vis as integer)
 		if not ma.dlog
 			
 			ma.dlog = createsprite(co.pixImg)
-			SetSpriteScale(ma.dlog, ma.s * 11, ma.s * 5)
+			SetSpriteScale(ma.dlog, ma.s * 10, ma.s * 5)
 			coSetSpriteColor(ma.dlog, co.grey[4])
 			SetSpritePosition(ma.dlog, (ma.ox + 5) * ma.s, (ma.oy + 7) * ma.s)
 			SetSpriteDepth(ma.dlog, MA_DEPTH_DIALOG)
@@ -2081,7 +2099,7 @@ function maDialog(vis as integer)
 			SetTextDepth(ma.dialogTx, MA_DEPTH_DTX)
 		
 			buCreateBut(ma.nextbut, ma.sbutImg, 0)
-			coSetSpriteColor(ma.nextbut.bg, ma.selCol1)
+			coSetSpriteColor(ma.nextbut.bg, ma.butCol)
 			buSetButScale(ma.nextBut, 0.5, 0.5)
 	
 		endif
