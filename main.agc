@@ -183,6 +183,8 @@ type Main
 	dirsfont as integer
 	subtitle as integer
 	levtitle as integer
+	gridy0 as float
+	gridy1 as float
 	
 endtype
 
@@ -732,8 +734,10 @@ function maClean()
 	for i = 0 to ma.shps.length
 		madeleteshape(ma.shps[i])
 	next
-	
+		
 	ma.shps.length = -1
+	
+	maDeleteShape(ma.selShp)
 	
 endfunction
 
@@ -751,6 +755,7 @@ function maGrid()
 	local col2 as integer
 	local spr as integer
 	local cell as Cell
+	local idx as integer
 	
 	//col1 = makecolor(47, 47, 47) 
 	//col2 = makecolor(31, 31, 31) 
@@ -789,6 +794,11 @@ function maGrid()
 		inc py, ma.s
 		
 	next
+	
+	idx = maGetCell(0, 0)
+	ma.gridy0 = ma.cells[idx].rect.y
+	idx = maGetCell(0, ma.h - 1)
+	ma.gridy1 = ma.cells[idx].rect.y - 1
 		
 endfunction
 
@@ -2481,9 +2491,30 @@ function maDropShape()
 endfunction
 
 // ---------------------------
+// Get the cell that has x and y.
+//
+function maGetCell(x as integer, y as integer)
+	
+	local idx as integer
+	local i as integer
+	
+	idx = -1
+	
+	for i = 0 to ma.cells.length
+		if ma.cells[i].x = x and ma.cells[i].y = y
+			
+			idx = i
+			exit
+			
+		endif	
+	next
+	
+endfunction idx
+
+// ---------------------------
 // Get the cell that is selected by mouse pos.
 //
-function maFindCell()
+function maFindCell(x as float, y as float)
 	
 	local idx as integer
 	local i as integer
@@ -2492,7 +2523,7 @@ function maFindCell()
 	
 	for i = 0 to ma.cells.length
 				
-		if coPointWithinRect2(in.ptrX, in.ptrY, ma.cells[i].rect)
+		if coPointWithinRect2(x, y, ma.cells[i].rect)
 			
 			idx = i
 			exit
@@ -2553,22 +2584,41 @@ endfunction
 function maHoverCell()
 	
 	local idx as integer
-	//local w as float
-	//local h as float
-	
+	local loc as Location
+	local x as float
+	local y as float
+	local y0 as float
+	local y1 as float
+		
 	if ma.selTyp and ma.selTyp < MA_SHP_S
 		
-		idx = maFindCell()
+		x = in.ptrX
+		y = in.ptrY
+				
+		if y < ma.gridy0
+			y = ma.gridy0	
+		elseif y > ma.gridy1
+			y = ma.gridy1
+		endif
 		
+		idx = maFindCell(x, y)
+						
 		if idx > -1
 			
-			ma.selShp.x = ma.cells[idx].x
-			ma.selShp.y = ma.cells[idx].y
+			loc.x = ma.cells[idx].x
+			loc.y = ma.cells[idx].y
+			
+			if not maShapesOverlap(ma.selShp, loc)	
+				
+				maForceFitShape(ma.selShp, loc)			
+				ma.selShp.x = loc.x
+				ma.selShp.y = loc.y
+				
+			endif
 
 			maPosShape(ma.selShp)
 			SetSpriteVisible(ma.selShp.spr, true)
-			
-
+							
 		else
 			
 			SetSpriteVisible(ma.selShp.spr, false)
@@ -2578,6 +2628,155 @@ function maHoverCell()
 	endif
 			
 endfunction
+
+// ---------------------------
+// Check if the shape can fit here.
+//
+function maForceFitShape(shp ref as Shape, loc ref as Location)
+
+	local n as integer
+		
+	if shp.typ = MA_SHP_I
+		n = 3
+	elseif shp.typ = MA_SHP_J
+		n = 2
+	elseif shp.typ = MA_SHP_L
+		n = 1
+	elseif shp.typ = MA_SHP_O
+		n = 0
+	endif
+	
+	if shp.rot = 1 or shp.rot = 3
+				
+		if loc.x < 0
+			loc.x = 0
+		elseif loc.x >= ma.w - 1
+			loc.x = ma.w - 1
+		endif
+		
+		if loc.y < 0
+			loc.y = 0
+		elseif loc.y + n >= ma.h - 1
+			loc.y = ma.h - 1 - n
+		endif
+		
+	else
+		
+		if loc.x < 0
+			loc.x = 0
+		elseif loc.x + n >= ma.w - 1
+			loc.x = ma.w - 1 - n
+		endif
+				
+		if loc.y < 0
+			loc.y = 0
+		elseif loc.y >= ma.h - 1
+			loc.y = ma.h - 1
+		endif
+		
+	endif
+	
+endfunction
+// ---------------------------
+// See if there's a shape here.
+//
+function maShapesOverlap(shp ref as Shape, loc ref as Location)
+	
+	local i as integer
+	local j as integer
+	local k as integer
+	local cx as integer
+	local cy as integer
+	local dx as integer
+	local dy as integer
+	local m as integer
+	local n as integer
+	local ret as integer
+	local mx as integer
+	local my as integer
+	local nx as integer
+	local ny as integer
+	
+	ret = false
+	
+	for i = 0 to ma.shps.length
+				
+		if shp.typ = MA_SHP_I
+			n = 3
+		elseif shp.typ = MA_SHP_J
+			n = 2
+		elseif shp.typ = MA_SHP_L
+			n = 1
+		elseif shp.typ = MA_SHP_O
+			n = 0
+		endif
+
+		if ma.shps[i].typ = MA_SHP_I
+			m = 3
+		elseif ma.shps[i].typ = MA_SHP_J
+			m = 2
+		elseif ma.shps[i].typ = MA_SHP_L
+			m = 1
+		elseif ma.shps[i].typ = MA_SHP_O
+			m = 0
+		endif
+
+		if shp.rot = 1 or shp.rot = 3
+			
+			nx = 0
+			ny = 1
+			
+		else 
+			
+			nx = 1
+			ny = 0
+			
+		endif
+
+		if ma.shps[i].rot = 1 or ma.shps[i].rot = 3
+			
+			mx = 0
+			my = 1
+			
+		else 
+			
+			mx = 1
+			my = 0
+			
+		endif
+				
+		for j = 0 to n // Scan through passed shape positions.
+			
+			cx = loc.x + (nx * j)
+			cy = loc.y + (ny * j)
+
+			for k = 0 to m // Scan through shape in list positions.
+			
+				dx = ma.shps[i].x + (mx * k)
+				dy = ma.shps[i].y + (my * k) 
+
+				if dx = cx and dy = cy // Shape positions in the same place?
+					
+					ret = true
+					exit
+					
+				endif
+								
+			next
+			
+			if ret
+				exit
+			endif
+			
+		next 
+		
+		if ret
+			exit
+		endif
+		
+	next 
+	
+endfunction ret
 
 // ---------------------------
 // END.
