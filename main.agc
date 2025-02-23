@@ -182,6 +182,7 @@ type Main
 	bestscore as integer // score value.
 	dirsfont as integer
 	subtitle as integer
+	levtitle as integer
 	
 endtype
 
@@ -429,10 +430,15 @@ function maInit()
 	ma.title = coCreateText("Balance", ma.font, 160)
 	SetTextAlignment(ma.title, 1)
 	SetTextPosition(ma.title, x, GetTextTotalHeight(ma.title) / 2 - ma.gap * 5)
+	//SetTextCharColor(ma.title, 
 
 	ma.best = coCreateText("", ma.font, 40)
 	SetTextAlignment(ma.best, 2)
 	SetTextPosition(ma.best, co.w - ma.gap * 3, gettexty(ma.title) + ma.gap * 2)
+
+	ma.levtitle = coCreateText("Select a level", ma.font, 40)
+	SetTextAlignment(ma.levtitle, 1)
+	//SetTextPosition(ma.levtitle, x, GetTextTotalHeight(ma.subtitle) / 2 - ma.gap * 1)
 
 	ma.selTyp = 0
 	ma.selShp.typ = MA_SHP_X
@@ -883,7 +889,7 @@ function maTitle()
 		if i = 0
 			
 			buSetButTx(but, DIR_C, str(count), ma.font, 0)
-			ts = gettextsize(but.txs[0].tx)
+			ts = gettextsize(but.txs[0].tx) - 6
 			
 		endif
 		
@@ -935,6 +941,14 @@ function maTitle()
 		
 	endif
 
+	if x = xx // Start of each line.
+		if mod(cy, 2) = 0 // Alternate starting color.
+			col = maFlipCol(2, 0)
+		else 
+			col = maFlipCol(1, 0)
+		endif
+	endif
+
 	coSetSpriteColor(ma.addBut.bg, col)
 
 	if n = 1
@@ -975,6 +989,17 @@ function maTitle()
 	
 	SetTextVisible(ma.subtitle, true)
 	SetTextVisible(ma.title, true)
+	
+	if ma.levbuts.length > -1
+		
+		SetTextPosition(ma.levtitle, co.w / 2, GetSpriteYByOffset(ma.levbuts[0].bg) - GetSpriteHeight(ma.levbuts[0].bg) - ma.s / n + ma.gap)
+		SetTextVisible(ma.levtitle, true)
+		
+	else
+		 
+		SetTextVisible(ma.levtitle, false)
+
+	endif
 	
 	SetTextString(ma.best, "Best" + chr(10) + "score" + chr(10) + str(ma.bestscore))
 	SetTextVisible(ma.best, true)
@@ -1033,6 +1058,7 @@ function maEdit()
 	SetTextVisible(ma.subtitle, false)
 	SetTextVisible(ma.title, false)
 	SetTextVisible(ma.best, false)
+	SetTextVisible(ma.levtitle, false)
 
 	buSetButVis(ma.levBut, true)
 	buSetButVis(ma.timeBut, true)
@@ -1130,6 +1156,7 @@ function maPlay()
 	SetTextVisible(ma.subtitle, false)
 	SetTextVisible(ma.title, false)		
 	SetTextVisible(ma.best, false)
+	SetTextVisible(ma.levtitle, false)
 
 	buSetButVis(ma.levBut, true)
 	buSetButVis(ma.timeBut, true)
@@ -2267,45 +2294,58 @@ function maSelectShape()
 	local idx as integer
 	local butok as integer
 	local count as integer
+	local y as float
 		
 	idx = -1
 	
 	for i = 0 to ma.buts.length
 	
-		butok = true
+		if buButPressed(ma.buts[i])
 		
-		if ma.state = MA_STATE_PLAY	
-			if ma.buts[i].txs.length = -1
-				butok = false
-			endif
-		endif 
+			butok = false
 			
-		if butok and buButPressed(ma.buts[i])
-			
-			if i = ma.selTyp
-				if i > 0 and i < MA_SHP_S			
-					maRotateShape(ma.sels[ma.selTyp])					
+			if ma.state = MA_STATE_PLAY	
+				if i > 0 and i < MA_SHP_S
+					if ma.buts[i].txs.length > -1
+						butok = true
+					endif
 				endif
-			else
-				ma.selTyp = i
-			endif
-				
-			if ma.selTyp and ma.selTyp < MA_SHP_S
-				maCloneShape(ma.sels[ma.selTyp], ma.selShp)
+			elseif ma.state = MA_STATE_EDIT 
+				butok = true
 			endif
 			
-			idx = i
+			if butok
+
+				if i = ma.selTyp
+					if i > 0 and i < MA_SHP_S			
+						maRotateShape(ma.sels[ma.selTyp])					
+					endif
+				else
+					ma.selTyp = i
+				endif
+					
+				if ma.selTyp and ma.selTyp < MA_SHP_S
+					maCloneShape(ma.sels[ma.selTyp], ma.selShp)
+				endif
+				
+				idx = i
+				
+			endif
 			
 			exit
 			
 		endif
-		
+					
 	next
 	
 	if idx = -1
-		if in.ptry < ma.cells[0].y * ma.s
+		
+		y = getspritey(ma.cells[0].spr)
+				
+		if in.ptry < y
 			idx = -2
 		endif
+		
 	endif
 		
 	maDrawButtons()	
@@ -2419,7 +2459,7 @@ function maDropShape()
 			
 		endif
 
-	else // Delete?
+	elseif ma.state = MA_STATE_EDIT // Delete?
 
 		for i = 0 to ma.shps.length
 						
