@@ -40,6 +40,8 @@
 #constant MA_SHP_T = 6
 #constant MA_SHP_Z = 7
 
+#constant MA_BUILTIN_LEVELS = 16
+
 type Cell
 	
 	x as integer
@@ -218,6 +220,7 @@ function maInit()
 	local h as float
 	local but as Button
 	local sc as float
+	local n as integer
 	
 	ma.s = 64
 	ma.w = 20
@@ -232,11 +235,13 @@ function maInit()
 	ma.helpAct = false
 	
 	setVirtualResolution(ma.pw, ma.ph)
-	h = GetDeviceHeight()
+	sc = 1.75
+	h = GetDeviceHeight() * sc
 	h = h * 0.95
 	w = h / (ma.ph / ma.pw)
 	SetWindowSize(w, h, false)
-	//SetWindowPosition(GetDeviceWidth() / 2 - GetWindowWidth() / 2, GetDeviceHeight() / 2 - GetWindowHeight() / 2)
+	//SetWindowPosition((GetDeviceWidth() * sc) / 2 - GetWindowWidth() / 2, h / 2 - GetWindowHeight() / 2)
+	SetWindowPosition(0, 0)
 	
 	coInit()
 
@@ -432,7 +437,16 @@ function maInit()
 	ma.title = coCreateText("Balance", ma.font, 160)
 	SetTextAlignment(ma.title, 1)
 	SetTextPosition(ma.title, x, GetTextTotalHeight(ma.title) / 2 - ma.gap * 5)
-	//SetTextCharColor(ma.title, 
+	
+	n = 1
+	
+	for i = 0 to len("Balance") - 1
+	
+		coSetTextCharColor(ma.title, i, ma.typCol[n])
+		inc n
+		if n = 4 then n = 1
+		
+	next
 
 	ma.best = coCreateText("", ma.font, 40)
 	SetTextAlignment(ma.best, 2)
@@ -446,54 +460,6 @@ function maInit()
 	ma.selShp.typ = MA_SHP_X
 	ma.phys = false
 		
-endfunction
-
-function maTestWelds()
-
-	local sprs as integer[]
-	local spr as integer
-	local x as float
-	local y as float
-	local i as integer
-	
-	y = 300
-	
-	for i = 0 to 3
-		
-		spr = createsprite(co.pixImg)
-		SetSpriteScale(spr, ma.s, ma.s)
-		SetSpritePosition(spr, 100, y)
-		SetSpritePhysicsGravityScale(spr, 10)
-		SetSpritePhysicsOn(spr, 2)
-		
-		if i > 1
-			CreateWeldJoint(sprs[i - 1], spr, getspritex(spr), getspritey(spr) + GetSpriteHeight(spr) / 2, 0)
-		endif
-		
-		sprs.insert(spr)
-		inc y, GetSpriteHeight(spr)
-				
-	next
-	
-	x = 100
-	
-	for i = 0 to 3
-		
-		spr = createsprite(co.pixImg)
-		SetSpriteScale(spr, ma.s, ma.s)
-		SetSpritePosition(spr, x, 100)
-		SetSpritePhysicsGravityScale(spr, 10)
-		SetSpritePhysicsOn(spr, 2)
-		
-		if i > 1
-			CreateWeldJoint(sprs[i - 1], spr, getspritex(spr), getspritey(spr) + GetSpriteHeight(spr) / 2, 0)
-		endif
-		
-		sprs.insert(spr)
-		inc x, GetSpriteWidth(spr)
-				
-	next
-	
 endfunction
 
 // ---------------------------
@@ -572,14 +538,14 @@ function maLoadLevels()
 		
 		for j = 0 to nbrs.length
 			if nbrs[j] = nbr
-				log("existing level=" + str(j))
+				//log("existing level=" + str(j))
 				continue // Ignore previously loaded levels to ensure we don't load twice.
 			endif
 		next
 		
 		nbrs.insert(nbr)
 				
-		log("folder=" + getfolder() + ", file=" + file)
+		//log("folder=" + getfolder() + ", file=" + file)
 		s = maLoadFile(file)
 		
 		sl.fromjson(s)
@@ -825,6 +791,7 @@ function maTitle()
 	local ox as integer
 	local oy as integer
 	local cy as integer
+	local edit as integer
 	
 	if ma.editAct
 		coSetSpriteColor(ma.editBut.bg, ma.selCol1)
@@ -832,6 +799,9 @@ function maTitle()
 		coSetSpriteColor(ma.editBut.bg, ma.butCol)
 	endif
 
+	ma.phys = false
+	//maStop()
+	
 	buUpdateButPos(ma.editBut)
 	
 	maclean()
@@ -877,6 +847,9 @@ function maTitle()
 	ww = w
 	cy = 0
 
+	edit = ma.editact
+	ma.editact = false
+	
 	for i = 0 to ma.levs.length
 	
 		if x = xx // Start of each line.
@@ -935,7 +908,7 @@ function maTitle()
 		endif
 								
 	next
-	
+		
 	if not ma.addbut.bg
 				
 		buCreateBut(ma.addBut, ma.sButImg, ma.addImg)
@@ -951,6 +924,50 @@ function maTitle()
 		
 	endif
 
+	if n = 1
+		buSetButPos(ma.addbut, x * ma.s + ma.s / 2, y * ma.s + ma.s / 2)
+	else
+		buSetButPos(ma.addbut, x * ma.s, y * ma.s)
+	endif
+	
+	// Now color levels for editing.
+	ma.editact = edit
+	
+	for i = 0 to ma.levs.length
+	
+		if x = xx // Start of each line.
+			if mod(cy, 2) = 0 // Alternate starting color.
+				col = maFlipCol(2, 0)
+			else 
+				col = maFlipCol(1, 0)
+			endif
+		endif
+		
+		if i > MA_BUILTIN_LEVELS - 1		
+			coSetSpriteColor(ma.levbuts[i].bg, col)
+		endif
+		
+		dec ww
+		
+		if ww = 0
+			
+			inc y, n
+			x = xx
+			
+			inc cy
+			
+			ww = w
+																							
+		else
+			 
+			inc x, n		
+				
+			col = maFlipCol(0, col)
+												
+		endif
+								
+	next
+	
 	if x = xx // Start of each line.
 		if mod(cy, 2) = 0 // Alternate starting color.
 			col = maFlipCol(2, 0)
@@ -960,12 +977,6 @@ function maTitle()
 	endif
 
 	coSetSpriteColor(ma.addBut.bg, col)
-
-	if n = 1
-		buSetButPos(ma.addbut, x * ma.s + ma.s / 2, y * ma.s + ma.s / 2)
-	else
-		buSetButPos(ma.addbut, x * ma.s, y * ma.s)
-	endif
 
 	//buSetButPos(ma.addBut, xx, yy)
 	buSetButVis(ma.addbut, ma.editAct)
@@ -1064,7 +1075,7 @@ endfunction col
 function maEdit()
 	
 	local i as integer
-
+	
 	SetTextVisible(ma.subtitle, false)
 	SetTextVisible(ma.title, false)
 	SetTextVisible(ma.best, false)
@@ -1096,6 +1107,10 @@ function maEdit()
 	next
 	
 	ma.state = MA_STATE_EDIT
+	
+	ma.selTyp = 0
+	ma.selShp.typ = MA_SHP_X
+	ma.phys = false
 
 	maHelp(false, 0)
 	maDialog(false)
@@ -1198,9 +1213,9 @@ function maPlay()
 		buSetButVis(ma.levbuts[i], false)
 	next
 
-	ma.phys = false
 	ma.state = MA_STATE_PLAY
-
+	ma.phys = false
+	
 	maHelp(false, 0)
 	maDialog(false)
 	maDrawLevel()
@@ -1300,8 +1315,15 @@ function maDrawButtons()
 		
 	elseif ma.state = MA_STATE_EDIT
 
+		if ma.phys
+			buSetButFg(ma.startBut, ma.stopImg)
+		else 
+			buSetButFg(ma.startBut, ma.playImg)
+		endif
+		
 		buSetButAct(ma.startBut, true)
 		buSetButVis(ma.startBut, true)
+		buUpdateButPos(ma.startBut)
 		
 	endif
 	
@@ -1351,17 +1373,8 @@ function maDrawLevel()
 					shp.rot = ma.levs[lev].shps[i].rot
 					shp.sol = ma.levs[lev].shps[i].sol
 					
-					maSetRotateShape(shp)
-					//if shp.sol then coSetSpriteAlpha(shp.spr, 127)
-					
+					maSetRotateShape(shp)					
 					ma.shps.insert(shp)
-					
-				//else
-					
-				//	shp.typ = ma.levs[lev].shps[i].typ
-				//	shp.x = ma.levs[lev].shps[i].x
-				//	shp.y = ma.levs[lev].shps[i].y
-				//	shp.spr = 0
 					
 				endif
 				
@@ -1377,18 +1390,6 @@ function maDrawLevel()
 				ma.shps.insert(shp)
 				
 			endif
-
-			//shp.rot = ma.levs[lev].shps[i].rot
-			//shp.sol = ma.levs[lev].shps[i].sol
-		
-			//if shp.spr
-				
-			//	maSetRotateShape(shp)
-			//	if shp.sol then coSetSpriteAlpha(shp.spr, 127)
-				
-			//endif
-				
-			//ma.shps.insert(shp)
 				
 		next
 				
@@ -1586,16 +1587,23 @@ function maUpdateTitle()
 					ma.lev = ma.levs.length + 1 // New level.
 					maEdit()
 					
+				else
+						
+					for i = 0 to ma.levButs.length
+						
+						if buButPressed(ma.levButs[i])
+							
+							if i > MA_BUILTIN_LEVELS - 1
+							
+								ma.lev = i
+								maEdit()
+								
+							endif
+							
+						endif
+					next
+					
 				endif
-						
-				for i = 0 to ma.levButs.length
-					if buButPressed(ma.levButs[i])
-						
-						ma.lev = i
-						maEdit()
-						
-					endif
-				next
 				
 			else
 				 
@@ -1624,22 +1632,63 @@ function maUpdateEdit()
 	inUpdate()
 	
 	if in.ptrPressed	
+		
 		if buButPressed(ma.backBut)
+
+			maEditCleanup()			
 			maTitle()
+			
 		elseif buButPressed(ma.helpBut)
+			
+			maEditCleanup()
 			maHelp(true, 0)
+			
 		elseif buButPressed(ma.startBut)
-			maStart()
+			
+			maDeleteShape(ma.selShp)
+			ma.selTyp = 0
+			maDrawButtons()
+			
+			if ma.phys
+				maStop()
+			else 
+				maStart()
+			endif
+			
 		elseif buButPressed(ma.timeBut)
+			
+			maEditCleanup()
 			maEditTime()
+			
 		elseif buButPressed(ma.saveBut)
+			
+			maEditCleanup()
 			maSaveLevel()
+			
 		elseif maSelectShape() = -1
+			
 			maDropShape()
+			
 		endif
+		
 	else
+		
 		maHoverCell()
+		
 	endif
+
+endfunction
+
+// ---------------------------
+// Edit clean up.
+//
+function maEditCleanup()
+	
+	maStop()
+	maDeleteShape(ma.selShp)
+	ma.selTyp = 0
+	ma.selShp.typ = MA_SHP_X
+	maDrawButtons()
 
 endfunction
 
@@ -1669,7 +1718,7 @@ function maEditTime()
 	SetEditBoxVisible(ma.edittime, true)
 	SetEditBoxFocus(ma.editTime, true)
 	SetTextVisible(ma.edittitle, true)
-	
+		
 endfunction
 
 // ---------------------------
@@ -1794,13 +1843,13 @@ function maUpdateWait()
 					if not ma.failtime
 						
 						ma.failtime = ma.time
-						log("failtime=" + str(ma.failtime))
+						//log("failtime=" + str(ma.failtime))
 
 					endif
 		
 					if ma.time = 0
 						
-						log("T=0, fail")
+						//log("T=0, fail")
 						ma.phys = false
 						maShowPhysics() // Stop physics.
 						ma.state = MA_STATE_FAIL
@@ -2224,41 +2273,41 @@ function maNext()
 endfunction
 
 // ---------------------------
+// Stop physics.
+//
+function maStop()
+	
+	ma.phys = false
+	buSetButFg(ma.startBut, ma.playImg)
+	buSetButAct(ma.startBut, true)
+	buUpdateButPos(ma.startBut)
+	maShowPhysics()
+	maResetShapes()
+		
+endfunction
+
+// ---------------------------
 // Check if start is prssed.
 //
 function maStart()
 					
-	if ma.phys
+	ma.phys = true
+	buSetButFg(ma.startBut, ma.stopImg)
+	
+	if ma.state = MA_STATE_PLAY
 		
-		ma.phys = false
-		buSetButFg(ma.startBut, ma.playImg)
-		buSetButAct(ma.startBut, true)
-		buUpdateButPos(ma.startBut)
-		maShowPhysics()
-		maResetShapes()
-			
-	else
+		buSetButAct(ma.helpBut, false)
+		buSetButAct(ma.retryBut, false)
+		buSetButAct(ma.startBut, false) // Make it not accessible.
+		ma.state = MA_STATE_WAIT
+		maDrawScores()
+		ma.starttime = GetMilliseconds()
+		ma.failtime = 0
 		
-		ma.phys = true
-		buSetButFg(ma.startBut, ma.stopImg)
-		
-		if ma.state = MA_STATE_PLAY
-			
-			buSetButAct(ma.helpBut, false)
-			buSetButAct(ma.retryBut, false)
-			buSetButAct(ma.startBut, false) // Make it not accessible.
-			ma.state = MA_STATE_WAIT
-			maDrawScores()
-			ma.starttime = GetMilliseconds()
-			ma.failtime = 0
-			
-		endif
-		
-		buUpdateButPos(ma.startBut)
-		maShowPhysics()
-
-				
 	endif
+	
+	buUpdateButPos(ma.startBut)
+	maShowPhysics()
 
 endfunction
 
@@ -2311,17 +2360,27 @@ function maSelectShape()
 	for i = 0 to ma.buts.length
 	
 		if buButPressed(ma.buts[i])
-		
+					
 			butok = false
 			
-			if ma.state = MA_STATE_PLAY	
+			if ma.state = MA_STATE_PLAY
+					
 				if i > 0 and i < MA_SHP_S
 					if ma.buts[i].txs.length > -1
 						butok = true
 					endif
 				endif
-			elseif ma.state = MA_STATE_EDIT 
+				
+			elseif ma.state = MA_STATE_EDIT
+				 
 				butok = true
+				
+				if i = 0 or i = MA_SHP_S
+					if ma.selShp.spr
+						maDeleteShape(ma.selShp)
+					endif
+				endif
+				
 			endif
 			
 			if butok
@@ -2656,8 +2715,8 @@ function maForceFitShape(shp ref as Shape, loc ref as Location)
 		
 		if loc.y < 0
 			loc.y = 0
-		elseif loc.y + n >= ma.h - 1
-			loc.y = ma.h - 1 - n
+		elseif loc.y + n >= ma.h - 2
+			loc.y = ma.h - 2 - n
 		endif
 		
 	else

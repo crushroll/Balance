@@ -2152,6 +2152,15 @@ endfunction ret
 //-----------------------------------------------------
 // Set the color of the passed text using bit pattern color.
 //
+function coSetTextCharColor(text as integer, idx as integer, col as integer)
+	
+	SetTextCharColor(text, idx, getcolorred(col), getcolorgreen(col), getcolorblue(col), 255)
+
+endfunction
+
+//-----------------------------------------------------
+// Set the color of the passed text using bit pattern color.
+//
 function coSetTextColor(text as integer, col as integer)
 	
 	SetTextColor(text, getcolorred(col), getcolorgreen(col), getcolorblue(col), 255)
