@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# AppGameKit (AGK) source files
+*.agc text eol=lf
+*.ags text eol=lf
