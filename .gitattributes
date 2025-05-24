@@ -4,3 +4,6 @@
 # AppGameKit (AGK) source files
 *.agc text eol=lf
 *.ags text eol=lf
+
+*.agc linguist-language=AGK
+*.agk linguist-language=AGK
